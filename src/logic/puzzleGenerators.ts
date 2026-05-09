@@ -3,6 +3,12 @@ import { publicDomainSources } from '../data/sourcePuzzles';
 import type { CognitiveDomain, PuzzleRound, VisualToken } from '../types';
 
 type Generator = (difficulty: number, isAssessment?: boolean) => PuzzleRound;
+type GeneratorEntry = {
+  typeId: string;
+  typeName: string;
+  generator: Generator;
+  complexity: 'Core' | 'Hard';
+};
 
 const colors = [
   { name: 'red', value: '#D94A38' },
@@ -1455,16 +1461,82 @@ function crypticClue(difficulty: number): PuzzleRound {
   };
 }
 
-export const trainingGenerators: Record<CognitiveDomain, Generator[]> = {
-  processingSpeed: [speedMatch, peripheralCatch, patternFlash, colorRush, symbolScan],
-  workingMemory: [sequenceRecall, numberChain, dualTrack, memoryGrid, operationSpan],
-  attention: [colorWord, focusFire, stopSignal, oddPulse, conflictGrid],
-  flexibility: [ruleFlip, trailBlaze, switchMath, categorySwap, ruleCascade],
-  reasoning: [nextInLine, interleavedSequence, matrixPick, oddOneOut, logicLock, balanceCode, logicGrid, conditionalSyllogism, spatialTransform, suspectDeduction],
-  language: [wordScramble, quickClue, letterFlow, wordChain, verbalAnalogy, constraintClue, criticalAssumption, crypticClue],
-  planning: [routePlanner, resourceSchedule, towerMoves, planningGrid, seatingDeduction, weighingPuzzle, riverCrossingPlan],
-  quantitative: [equationSystem, ratioPuzzle, symbolicPattern, quantitativeBalance, dataSufficiency, workRate, mixturePuzzle]
+export const trainingGeneratorEntries: Record<CognitiveDomain, GeneratorEntry[]> = {
+  processingSpeed: [
+    { typeId: 'speed-match', typeName: 'Speed Match', generator: speedMatch, complexity: 'Core' },
+    { typeId: 'peripheral-catch', typeName: 'Peripheral Catch', generator: peripheralCatch, complexity: 'Core' },
+    { typeId: 'pattern-flash', typeName: 'Pattern Flash', generator: patternFlash, complexity: 'Core' },
+    { typeId: 'color-rush', typeName: 'Color Rush', generator: colorRush, complexity: 'Core' },
+    { typeId: 'symbol-scan', typeName: 'Symbol Scan', generator: symbolScan, complexity: 'Core' }
+  ],
+  workingMemory: [
+    { typeId: 'sequence-recall', typeName: 'Sequence Recall', generator: sequenceRecall, complexity: 'Core' },
+    { typeId: 'number-chain', typeName: 'Number Chain', generator: numberChain, complexity: 'Core' },
+    { typeId: 'dual-track', typeName: 'Dual Track', generator: dualTrack, complexity: 'Hard' },
+    { typeId: 'memory-grid', typeName: 'Memory Grid', generator: memoryGrid, complexity: 'Core' },
+    { typeId: 'operation-span', typeName: 'Operation Span', generator: operationSpan, complexity: 'Hard' }
+  ],
+  attention: [
+    { typeId: 'color-word', typeName: 'Color Word', generator: colorWord, complexity: 'Core' },
+    { typeId: 'focus-fire', typeName: 'Focus Fire', generator: focusFire, complexity: 'Core' },
+    { typeId: 'stop-signal', typeName: 'Stop Signal', generator: stopSignal, complexity: 'Core' },
+    { typeId: 'odd-pulse', typeName: 'Odd Pulse', generator: oddPulse, complexity: 'Core' },
+    { typeId: 'conflict-grid', typeName: 'Conflict Grid', generator: conflictGrid, complexity: 'Hard' }
+  ],
+  flexibility: [
+    { typeId: 'rule-flip', typeName: 'Rule Flip', generator: ruleFlip, complexity: 'Core' },
+    { typeId: 'trail-blaze', typeName: 'Trail Blaze', generator: trailBlaze, complexity: 'Core' },
+    { typeId: 'switch-math', typeName: 'Switch Math', generator: switchMath, complexity: 'Core' },
+    { typeId: 'category-swap', typeName: 'Category Swap', generator: categorySwap, complexity: 'Core' },
+    { typeId: 'rule-cascade', typeName: 'Rule Cascade', generator: ruleCascade, complexity: 'Hard' }
+  ],
+  reasoning: [
+    { typeId: 'next-in-line', typeName: 'Next in Line', generator: nextInLine, complexity: 'Core' },
+    { typeId: 'interleaved-sequence', typeName: 'Interleaved Sequence', generator: interleavedSequence, complexity: 'Hard' },
+    { typeId: 'matrix-pick', typeName: 'Matrix Pick', generator: matrixPick, complexity: 'Core' },
+    { typeId: 'odd-one-out', typeName: 'Odd One Out', generator: oddOneOut, complexity: 'Core' },
+    { typeId: 'logic-lock', typeName: 'Logic Lock', generator: logicLock, complexity: 'Hard' },
+    { typeId: 'balance-code', typeName: 'Balance Code', generator: balanceCode, complexity: 'Hard' },
+    { typeId: 'logic-grid', typeName: 'Logic Grid', generator: logicGrid, complexity: 'Hard' },
+    { typeId: 'conditional-syllogism', typeName: 'Conditional Chain', generator: conditionalSyllogism, complexity: 'Hard' },
+    { typeId: 'spatial-transform', typeName: 'Spatial Transform', generator: spatialTransform, complexity: 'Hard' },
+    { typeId: 'suspect-deduction', typeName: 'Suspect Deduction', generator: suspectDeduction, complexity: 'Hard' }
+  ],
+  language: [
+    { typeId: 'word-scramble', typeName: 'Word Scramble', generator: wordScramble, complexity: 'Core' },
+    { typeId: 'quick-clue', typeName: 'Quick Clue', generator: quickClue, complexity: 'Core' },
+    { typeId: 'letter-flow', typeName: 'Letter Flow', generator: letterFlow, complexity: 'Core' },
+    { typeId: 'word-chain', typeName: 'Word Chain', generator: wordChain, complexity: 'Core' },
+    { typeId: 'verbal-analogy', typeName: 'Verbal Analogy', generator: verbalAnalogy, complexity: 'Hard' },
+    { typeId: 'constraint-clue', typeName: 'Constraint Clue', generator: constraintClue, complexity: 'Hard' },
+    { typeId: 'critical-assumption', typeName: 'Critical Assumption', generator: criticalAssumption, complexity: 'Hard' },
+    { typeId: 'cryptic-clue', typeName: 'Cryptic Clue', generator: crypticClue, complexity: 'Hard' }
+  ],
+  planning: [
+    { typeId: 'route-planner', typeName: 'Route Planner', generator: routePlanner, complexity: 'Core' },
+    { typeId: 'resource-schedule', typeName: 'Resource Schedule', generator: resourceSchedule, complexity: 'Hard' },
+    { typeId: 'tower-moves', typeName: 'Tower Moves', generator: towerMoves, complexity: 'Core' },
+    { typeId: 'planning-grid', typeName: 'Planning Grid', generator: planningGrid, complexity: 'Hard' },
+    { typeId: 'seating-deduction', typeName: 'Seating Deduction', generator: seatingDeduction, complexity: 'Hard' },
+    { typeId: 'weighing-puzzle', typeName: 'Weighing Puzzle', generator: weighingPuzzle, complexity: 'Hard' },
+    { typeId: 'river-crossing-plan', typeName: 'River Plan', generator: riverCrossingPlan, complexity: 'Hard' }
+  ],
+  quantitative: [
+    { typeId: 'equation-system', typeName: 'Equation System', generator: equationSystem, complexity: 'Core' },
+    { typeId: 'ratio-puzzle', typeName: 'Ratio Split', generator: ratioPuzzle, complexity: 'Core' },
+    { typeId: 'symbolic-pattern', typeName: 'Symbolic Pattern', generator: symbolicPattern, complexity: 'Hard' },
+    { typeId: 'quant-balance', typeName: 'Quant Balance', generator: quantitativeBalance, complexity: 'Hard' },
+    { typeId: 'data-sufficiency', typeName: 'Data Sufficiency', generator: dataSufficiency, complexity: 'Hard' },
+    { typeId: 'work-rate', typeName: 'Work Rate', generator: workRate, complexity: 'Hard' },
+    { typeId: 'mixture-puzzle', typeName: 'Mixture', generator: mixturePuzzle, complexity: 'Core' }
+  ]
 };
+
+export const trainingGenerators: Record<CognitiveDomain, Generator[]> = Object.fromEntries(
+  domainIds.map((domain) => [domain, trainingGeneratorEntries[domain].map((entry) => entry.generator)])
+) as Record<CognitiveDomain, Generator[]>;
+
+export const allTrainingPuzzleTypeIds = domainIds.flatMap((domain) => trainingGeneratorEntries[domain].map((entry) => entry.typeId));
 
 export const assessmentGenerators: Record<CognitiveDomain, Generator> = {
   processingSpeed: (difficulty) => speedMatch(difficulty, true),
@@ -1477,19 +1549,32 @@ export const assessmentGenerators: Record<CognitiveDomain, Generator> = {
   quantitative: (difficulty) => equationSystem(difficulty, true)
 };
 
-export function generateTrainingPuzzle(domain: CognitiveDomain, difficulty: number) {
-  return pick(trainingGenerators[domain])(difficulty, false);
+export function generateTrainingPuzzle(domain: CognitiveDomain, difficulty: number, enabledPuzzleTypes = allTrainingPuzzleTypeIds) {
+  const allowed = new Set(enabledPuzzleTypes);
+  const generators = trainingGeneratorEntries[domain].filter((entry) => allowed.has(entry.typeId));
+  return pick(generators.length ? generators : trainingGeneratorEntries[domain]).generator(difficulty, false);
 }
 
 export function generateAssessmentBattery(difficultyByDomain: Record<CognitiveDomain, number>) {
   return domainIds.map((domain) => assessmentGenerators[domain](difficultyByDomain[domain] ?? 5, true));
 }
 
-export function generateDailySession(difficultyByDomain: Record<CognitiveDomain, number>, count = 12) {
+export function generateDailySession(
+  difficultyByDomain: Record<CognitiveDomain, number>,
+  count = 12,
+  options?: { enabledDomains?: CognitiveDomain[]; enabledPuzzleTypes?: string[] }
+) {
+  const enabledDomainSet = new Set(options?.enabledDomains?.length ? options.enabledDomains : domainIds);
+  const enabledTypeSet = new Set(options?.enabledPuzzleTypes?.length ? options.enabledPuzzleTypes : allTrainingPuzzleTypeIds);
+  const allowedDomains = domainIds.filter((domain) => {
+    if (!enabledDomainSet.has(domain)) return false;
+    return trainingGeneratorEntries[domain].some((entry) => enabledTypeSet.has(entry.typeId));
+  });
+  const domainsForSession = allowedDomains.length ? allowedDomains : options?.enabledDomains?.length ? options.enabledDomains : domainIds;
   const puzzles: PuzzleRound[] = [];
   for (let index = 0; index < count; index += 1) {
-    const domain = domainIds[index % domainIds.length]!;
-    puzzles.push(generateTrainingPuzzle(domain, difficultyByDomain[domain] ?? 5));
+    const domain = domainsForSession[index % domainsForSession.length]!;
+    puzzles.push(generateTrainingPuzzle(domain, difficultyByDomain[domain] ?? 5, [...enabledTypeSet]));
   }
   return shuffle(puzzles);
 }

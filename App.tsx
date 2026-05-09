@@ -5,7 +5,7 @@ import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } fr
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { domains, domainIds } from './src/data/domains';
 import { publicDomainSources } from './src/data/sourcePuzzles';
-import { generateAssessmentBattery, generateDailySession } from './src/logic/puzzleGenerators';
+import { generateAssessmentBattery, generateDailySession, trainingGeneratorEntries } from './src/logic/puzzleGenerators';
 import { scoreAssessment } from './src/logic/scoring';
 import { useAppStore } from './src/store/useAppStore';
 import type { AssessmentScore, CognitiveDomain, PuzzleAttempt } from './src/types';
@@ -58,17 +58,24 @@ function usePwaInstallSupport() {
 function FeedScreen() {
   const { height } = useWindowDimensions();
   const domainsState = useAppStore((state) => state.domains);
+  const feedSettings = useAppStore((state) => state.feedSettings);
   const recordAttempt = useAppStore((state) => state.recordAttempt);
   const streakDays = useAppStore((state) => state.streakDays);
   const session = useMemo(
-    () => generateDailySession(Object.fromEntries(domainIds.map((domain) => [domain, domainsState[domain].currentLevel])) as Record<CognitiveDomain, number>, 18),
-    [domainsState]
+    () =>
+      generateDailySession(
+        Object.fromEntries(domainIds.map((domain) => [domain, domainsState[domain].currentLevel])) as Record<CognitiveDomain, number>,
+        18,
+        feedSettings
+      ),
+    [domainsState, feedSettings]
   );
   const cardHeight = Math.max(430, height - 148);
   const [index, setIndex] = useState(0);
   const current = session[index] ?? session[0];
   const goNext = () => setIndex((value) => Math.min(value + 1, session.length - 1));
   const goPrevious = () => setIndex((value) => Math.max(value - 1, 0));
+  useEffect(() => setIndex(0), [feedSettings]);
 
   return (
     <View style={styles.screen}>
@@ -241,10 +248,68 @@ function PagerControls({ index, total, onPrevious, onNext }: { index: number; to
 
 function SettingsScreen() {
   const resetProgress = useAppStore((state) => state.resetProgress);
+  const feedSettings = useAppStore((state) => state.feedSettings);
+  const toggleFeedDomain = useAppStore((state) => state.toggleFeedDomain);
+  const toggleFeedPuzzleType = useAppStore((state) => state.toggleFeedPuzzleType);
+  const enableAllFeedPuzzles = useAppStore((state) => state.enableAllFeedPuzzles);
+  const enableHardFeedPuzzles = useAppStore((state) => state.enableHardFeedPuzzles);
+  const enabledDomainSet = new Set(feedSettings.enabledDomains);
+  const enabledTypeSet = new Set(feedSettings.enabledPuzzleTypes);
   return (
     <ScrollView contentContainerStyle={styles.scrollContent}>
       <Text style={styles.kicker}>Settings</Text>
-      <Text style={styles.screenTitle}>Scientific guardrails</Text>
+      <Text style={styles.screenTitle}>Customize training</Text>
+      <View style={styles.quickActions}>
+        <Pressable style={styles.primaryButtonSmall} onPress={enableHardFeedPuzzles}>
+          <Text style={styles.primaryButtonText}>Hard logic mix</Text>
+        </Pressable>
+        <Pressable style={styles.secondaryButtonSmall} onPress={enableAllFeedPuzzles}>
+          <Text style={styles.secondaryButtonText}>Enable all</Text>
+        </Pressable>
+      </View>
+
+      <InfoBlock
+        title="Complex puzzle placement"
+        body="The harder CAT/GMAT-style tasks live mainly in Reasoning & Logic, Planning & Strategy, Quantitative Reasoning, and Language & Verbal. Use the Hard logic mix preset or choose individual types below."
+      />
+
+      <Text style={styles.sectionTitle}>Feed categories</Text>
+      {domains.map((domain) => {
+        const selected = enabledDomainSet.has(domain.id);
+        const enabledCount = trainingGeneratorEntries[domain.id].filter((entry) => enabledTypeSet.has(entry.typeId)).length;
+        return (
+          <Pressable key={domain.id} style={[styles.selectorRow, selected && styles.selectorRowActive]} onPress={() => toggleFeedDomain(domain.id)}>
+            <View style={[styles.domainIcon, { backgroundColor: selected ? domain.color : '#A9B0B8' }]}>
+              <Feather name={selected ? 'check' : (domain.icon as never)} color="#FFFFFF" size={18} />
+            </View>
+            <View style={styles.domainText}>
+              <Text style={styles.domainName}>{domain.label}</Text>
+              <Text style={styles.domainDescription}>{enabledCount} selected puzzle types</Text>
+            </View>
+          </Pressable>
+        );
+      })}
+
+      <Text style={styles.sectionTitle}>Puzzle types</Text>
+      {domains.map((domain) => (
+        <View key={domain.id} style={styles.typeGroup}>
+          <Text style={styles.typeGroupTitle}>{domain.label}</Text>
+          {trainingGeneratorEntries[domain.id].map((entry) => {
+            const selected = enabledTypeSet.has(entry.typeId);
+            return (
+              <Pressable key={entry.typeId} style={styles.typeRow} onPress={() => toggleFeedPuzzleType(entry.typeId)}>
+                <Feather name={selected ? 'check-square' : 'square'} size={19} color={selected ? domain.color : '#8D96A0'} />
+                <View style={styles.typeText}>
+                  <Text style={styles.typeName}>{entry.typeName}</Text>
+                  <Text style={styles.typeMeta}>{entry.complexity}</Text>
+                </View>
+              </Pressable>
+            );
+          })}
+        </View>
+      ))}
+
+      <Text style={styles.sectionTitle}>Guardrails</Text>
       <InfoBlock
         title="What the app claims"
         body="Exercises are designed to challenge specific cognitive skills and track your in-app task performance over time."
@@ -547,9 +612,95 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 18
   },
+  quickActions: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 16
+  },
+  primaryButtonSmall: {
+    flex: 1,
+    backgroundColor: '#20242A',
+    borderRadius: 8,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 10
+  },
+  secondaryButtonSmall: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderColor: '#D6DADF',
+    borderWidth: 1,
+    borderRadius: 8,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 10
+  },
   primaryButtonText: {
     color: '#FFFFFF',
     fontWeight: '900'
+  },
+  secondaryButtonText: {
+    color: '#20242A',
+    fontWeight: '900'
+  },
+  sectionTitle: {
+    color: '#20242A',
+    fontSize: 18,
+    lineHeight: 23,
+    fontWeight: '900',
+    marginTop: 22,
+    marginBottom: 8
+  },
+  selectorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#E1DDD1',
+    marginBottom: 10
+  },
+  selectorRowActive: {
+    borderColor: '#20242A'
+  },
+  typeGroup: {
+    borderTopWidth: 1,
+    borderTopColor: '#E1DDD1',
+    paddingTop: 12,
+    marginTop: 8
+  },
+  typeGroupTitle: {
+    color: '#20242A',
+    fontWeight: '900',
+    fontSize: 15,
+    marginBottom: 4
+  },
+  typeRow: {
+    minHeight: 42,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 8
+  },
+  typeText: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 8
+  },
+  typeName: {
+    flex: 1,
+    color: '#20242A',
+    fontWeight: '800'
+  },
+  typeMeta: {
+    color: '#68717C',
+    fontWeight: '900',
+    fontSize: 12
   },
   infoBlock: {
     marginTop: 14,

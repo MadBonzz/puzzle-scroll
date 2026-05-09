@@ -31,6 +31,11 @@ export interface PuzzleAttempt {
   isAssessment: boolean;
 }
 
+export interface FeedSettings {
+  enabledDomains: CognitiveDomain[];
+  enabledPuzzleTypes: string[];
+}
+
 export interface Assessment {
   id: string;
   date: number;
