@@ -1,0 +1,32 @@
+{
+  "expo": {
+    "name": "PuzzleScroll",
+    "slug": "puzzle-scroll",
+    "version": "0.1.0",
+    "platforms": [
+      "ios",
+      "android",
+      "web"
+    ],
+    "orientation": "portrait",
+    "scheme": "puzzlescroll",
+    "userInterfaceStyle": "light",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "bundleIdentifier": "com.puzzlescroll.app",
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "com.puzzlescroll.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#F7F4EA"
+      }
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single"
+    }
+  }
+}
