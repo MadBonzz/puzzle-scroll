@@ -1,7 +1,7 @@
 import { Feather } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useMemo, useState } from 'react';
-import { FlatList, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { domains, domainIds } from './src/data/domains';
 import { publicDomainSources } from './src/data/sourcePuzzles';
@@ -65,6 +65,10 @@ function FeedScreen() {
     [domainsState]
   );
   const cardHeight = Math.max(430, height - 148);
+  const [index, setIndex] = useState(0);
+  const current = session[index] ?? session[0];
+  const goNext = () => setIndex((value) => Math.min(value + 1, session.length - 1));
+  const goPrevious = () => setIndex((value) => Math.max(value - 1, 0));
 
   return (
     <View style={styles.screen}>
@@ -78,15 +82,10 @@ function FeedScreen() {
           <Text style={styles.headerStatLabel}>day streak</Text>
         </View>
       </View>
-      <FlatList
-        data={session}
-        keyExtractor={(item) => item.id}
-        pagingEnabled
-        snapToInterval={cardHeight}
-        decelerationRate="fast"
-        showsVerticalScrollIndicator={false}
-        renderItem={({ item }) => <PuzzleCard puzzle={item} height={cardHeight} onAnswered={recordAttempt} />}
-      />
+      <View style={styles.cardStage}>
+        {current ? <PuzzleCard key={current.id} puzzle={current} height={cardHeight} onAnswered={recordAttempt} /> : null}
+      </View>
+      <PagerControls index={index} total={session.length} onPrevious={goPrevious} onNext={goNext} />
     </View>
   );
 }
@@ -155,6 +154,10 @@ function AssessScreen() {
     [batteryId, domainScores]
   );
   const cardHeight = Math.max(430, height - 148);
+  const [index, setIndex] = useState(0);
+  const current = battery[index] ?? battery[0];
+  const goNext = () => setIndex((value) => Math.min(value + 1, battery.length - 1));
+  const goPrevious = () => setIndex((value) => Math.max(value - 1, 0));
 
   const onAnswered = (attempt: PuzzleAttempt) => {
     recordAttempt(attempt);
@@ -212,15 +215,26 @@ function AssessScreen() {
         </View>
         <Text style={styles.headerNote}>1 per domain</Text>
       </View>
-      <FlatList
-        data={battery}
-        keyExtractor={(item) => item.id}
-        pagingEnabled
-        snapToInterval={cardHeight}
-        decelerationRate="fast"
-        showsVerticalScrollIndicator={false}
-        renderItem={({ item }) => <PuzzleCard puzzle={item} height={cardHeight} onAnswered={onAnswered} />}
-      />
+      <View style={styles.cardStage}>
+        {current ? <PuzzleCard key={current.id} puzzle={current} height={cardHeight} onAnswered={onAnswered} /> : null}
+      </View>
+      <PagerControls index={index} total={battery.length} onPrevious={goPrevious} onNext={goNext} />
+    </View>
+  );
+}
+
+function PagerControls({ index, total, onPrevious, onNext }: { index: number; total: number; onPrevious: () => void; onNext: () => void }) {
+  return (
+    <View style={styles.pager}>
+      <Pressable style={[styles.pagerButton, index === 0 && styles.pagerButtonDisabled]} onPress={onPrevious} disabled={index === 0}>
+        <Feather name="chevron-up" size={18} color={index === 0 ? '#A9B0B8' : '#20242A'} />
+        <Text style={[styles.pagerButtonText, index === 0 && styles.pagerButtonTextDisabled]}>Prev</Text>
+      </Pressable>
+      <Text style={styles.pagerCount}>{index + 1} / {total}</Text>
+      <Pressable style={[styles.pagerButton, index >= total - 1 && styles.pagerButtonDisabled]} onPress={onNext} disabled={index >= total - 1}>
+        <Text style={[styles.pagerButtonText, index >= total - 1 && styles.pagerButtonTextDisabled]}>Next</Text>
+        <Feather name="chevron-down" size={18} color={index >= total - 1 ? '#A9B0B8' : '#20242A'} />
+      </Pressable>
     </View>
   );
 }
@@ -323,6 +337,47 @@ const styles = StyleSheet.create({
   },
   screen: {
     flex: 1
+  },
+  cardStage: {
+    flex: 1
+  },
+  pager: {
+    minHeight: 54,
+    paddingHorizontal: 12,
+    paddingBottom: 6,
+    paddingTop: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FFFDF8',
+    borderTopWidth: 1,
+    borderTopColor: '#E4E0D5'
+  },
+  pagerButton: {
+    minWidth: 92,
+    minHeight: 40,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#D6DADF',
+    backgroundColor: '#FFFFFF',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4
+  },
+  pagerButtonDisabled: {
+    backgroundColor: '#F1F2F2'
+  },
+  pagerButtonText: {
+    color: '#20242A',
+    fontWeight: '900'
+  },
+  pagerButtonTextDisabled: {
+    color: '#A9B0B8'
+  },
+  pagerCount: {
+    color: '#5D6670',
+    fontWeight: '900'
   },
   appHeader: {
     minHeight: 76,

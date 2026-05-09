@@ -74,6 +74,10 @@ function hiddenTokens(count: number, color = '#CDD3DA') {
   return Array.from({ length: count }, (_, index) => token(String(index + 1), color));
 }
 
+function hiddenSequence(count: number, color = '#CDD3DA') {
+  return Array.from({ length: count }, (_, index) => token(`#${index + 1}`, color));
+}
+
 function studyMs(difficulty: number, base = 2600) {
   return Math.max(900, base - difficulty * 70);
 }
@@ -238,11 +242,11 @@ function sequenceRecall(difficulty: number, isAssessment = false): PuzzleRound {
     subtitle: isAssessment ? 'Assessment: Corsi-style span' : 'Repeat the tile order',
     difficulty,
     isAssessment,
-    prompt: 'Which sequence matches the lit tiles?',
-    visual: { mode: 'grid', tokens: hiddenTokens(9), columns: 3 },
+    prompt: 'Choose the numbers in the exact shown order, first to last.',
+    visual: { mode: 'tiles', tokens: hiddenSequence(sequence.length), columns: sequence.length },
     requiresReady: true,
-    studyPrompt: 'Memorize the tile sequence. It will disappear.',
-    studyVisual: { mode: 'grid', tokens: sequence.map((value) => token(value, '#2E6F95')), columns: 3 },
+    studyPrompt: 'Memorize left to right. Do not read by grid rows.',
+    studyVisual: { mode: 'tiles', tokens: sequence.map((value, index) => token(`${index + 1}: ${value}`, '#2E6F95')), columns: sequence.length },
     studyDurationMs: studyMs(difficulty, 2600),
     choices,
     correctIndex,
