@@ -64,6 +64,24 @@ export const domains: DomainMeta[] = [
     color: '#A03C6D',
     tint: '#F8E4EE',
     description: 'Word retrieval, clues, anagrams, and verbal sequencing.'
+  },
+  {
+    id: 'planning',
+    label: 'Planning & Strategy',
+    shortLabel: 'Plan',
+    icon: 'git-branch',
+    color: '#426A3F',
+    tint: '#E8F2E5',
+    description: 'Multi-step planning, route selection, resource tradeoffs.'
+  },
+  {
+    id: 'quantitative',
+    label: 'Quantitative Reasoning',
+    shortLabel: 'Quant',
+    icon: 'hash',
+    color: '#8A4F2A',
+    tint: '#F4E9DF',
+    description: 'Numerical patterns, balances, ratios, and symbolic rules.'
   }
 ];
 

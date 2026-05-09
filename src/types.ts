@@ -4,7 +4,9 @@ export type CognitiveDomain =
   | 'attention'
   | 'flexibility'
   | 'reasoning'
-  | 'language';
+  | 'language'
+  | 'planning'
+  | 'quantitative';
 
 export type Trend = 'improving' | 'stable' | 'declining';
 
@@ -49,12 +51,13 @@ export interface VisualToken {
 }
 
 export interface PuzzleVisual {
-  mode: 'tiles' | 'grid' | 'comparison' | 'trail' | 'statement';
+  mode: 'tiles' | 'grid' | 'comparison' | 'trail' | 'statement' | 'rules';
   tokens?: VisualToken[];
   left?: VisualToken[];
   right?: VisualToken[];
   columns?: number;
   note?: string;
+  lines?: string[];
 }
 
 export interface PuzzleRound {

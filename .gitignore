@@ -41,5 +41,7 @@ PLAN.md
 research/
 
 # User screenshots and ad-hoc captures
-Screenshot*.png
+/*.png
+/*.jpg
+/*.jpeg
 *.tmp

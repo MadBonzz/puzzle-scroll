@@ -25,6 +25,8 @@ const clueBank = [
   { clue: 'A careful estimate', answer: 'approximation', distractors: ['celebration', 'conversation', 'destination'] }
 ];
 
+const people = ['Ari', 'Bea', 'Cy', 'Dev'];
+
 let counter = 0;
 
 function id(typeId: string) {
@@ -569,8 +571,12 @@ function ruleCascade(difficulty: number): PuzzleRound {
     subtitle: 'Nested rule switching',
     difficulty,
     isAssessment: false,
-    prompt: `If number is even use color, otherwise shape. Then if color name has more than 4 letters switch to number. What final label applies?`,
-    visual: { mode: 'tiles', tokens: [token(`${item.number} ${item.shape}`, item.color.value)] },
+    prompt: 'Apply the rule cascade. What final label applies?',
+    visual: {
+      mode: 'rules',
+      note: `${item.number} ${item.color.name} ${item.shape}`,
+      lines: ['If number is even, use color; otherwise use shape.', 'If the color name has more than 4 letters, switch to number.']
+    },
     choices,
     correctIndex,
     explanation: `The first rule points to ${firstRule}; the second rule resolves to ${secondRule}, so the answer is ${answer}.`
@@ -703,6 +709,104 @@ function balanceCode(difficulty: number): PuzzleRound {
     choices,
     correctIndex,
     explanation: `X must be ${leftA + leftB} - ${rightA}, so X = ${answer}.`
+  };
+}
+
+function quantitativeBalance(difficulty: number): PuzzleRound {
+  const puzzle = balanceCode(difficulty);
+  return {
+    ...puzzle,
+    id: id('quant-balance'),
+    domain: 'quantitative',
+    typeId: 'quant-balance',
+    typeName: 'Quant Balance',
+    subtitle: 'Algebraic balance reasoning'
+  };
+}
+
+function logicGrid(difficulty: number, isAssessment = false): PuzzleRound {
+  const answer = pick(['Ari-red-1', 'Bea-blue-2', 'Cy-green-3']);
+  const [person, color, rank] = answer.split('-');
+  const { choices, correctIndex } = withAnswer(['Ari-blue-2', 'Bea-green-1', 'Cy-red-2'], answer);
+  return {
+    id: id(isAssessment ? 'deduction-check' : 'logic-grid'),
+    domain: isAssessment ? 'planning' : 'reasoning',
+    typeId: isAssessment ? 'deduction-check' : 'logic-grid',
+    typeName: isAssessment ? 'Deduction Check' : 'Logic Grid',
+    subtitle: 'Multi-clue elimination',
+    difficulty,
+    isAssessment,
+    prompt: 'Which assignment is forced by the clues?',
+    visual: {
+      mode: 'rules',
+      note: 'Clues',
+      lines: [
+        `${person} is paired with ${color}.`,
+        `The ${color} item is ranked ${rank}.`,
+        `${pick(people.filter((name) => name !== person))} is not paired with ${color}.`,
+        `Only one option can satisfy all clues.`
+      ]
+    },
+    choices,
+    correctIndex,
+    explanation: `${answer} is the only option that keeps the person-color and color-rank clues together.`
+  };
+}
+
+function planningGrid(difficulty: number): PuzzleRound {
+  const puzzle = logicGrid(difficulty, false);
+  return {
+    ...puzzle,
+    id: id('planning-grid'),
+    domain: 'planning',
+    typeId: 'planning-grid',
+    typeName: 'Planning Grid',
+    subtitle: 'Deduction for action selection'
+  };
+}
+
+function conditionalSyllogism(difficulty: number): PuzzleRound {
+  const answer = pick(['Mira studies logic', 'The task is skipped', 'The score is reviewed']);
+  const middle = answer === 'Mira studies logic' ? 'Mira solves matrices' : answer === 'The task is skipped' ? 'The timer expires' : 'Accuracy drops';
+  const { choices, correctIndex } = withAnswer(['The first rule is false', middle, 'No conclusion follows'], answer);
+  return {
+    id: id('conditional-syllogism'),
+    domain: 'reasoning',
+    typeId: 'conditional-syllogism',
+    typeName: 'Conditional Chain',
+    subtitle: 'Two-step verbal deduction',
+    difficulty,
+    isAssessment: false,
+    prompt: 'What must be true?',
+    visual: {
+      mode: 'rules',
+      note: 'Rules',
+      lines: [`If ${middle}, then ${answer}.`, `The condition is true: ${middle}.`, 'Apply only valid logical steps.']
+    },
+    choices,
+    correctIndex,
+    explanation: `Modus ponens applies: if ${middle} implies ${answer}, and ${middle} is true, then ${answer} must be true.`
+  };
+}
+
+function spatialTransform(difficulty: number): PuzzleRound {
+  const source = ['A', '.', 'B', '.', 'C', '.'];
+  const rotated = ['.', 'C', '.', 'B', '.', 'A'];
+  const answer = rotated.join('');
+  const { choices, correctIndex } = withAnswer(['A.B.C.', '.A.B.C', 'C.B.A.'], answer);
+  return {
+    id: id('spatial-transform'),
+    domain: 'reasoning',
+    typeId: 'spatial-transform',
+    typeName: 'Spatial Transform',
+    subtitle: 'Mental rotation and reversal',
+    difficulty,
+    isAssessment: false,
+    prompt: 'Reverse the row and preserve blanks. Which result matches?',
+    visual: { mode: 'grid', tokens: source.map((value) => token(value, value === '.' ? '#D5D9DF' : '#5D5BB4')), columns: 6 },
+    choices,
+    correctIndex,
+    explanation: 'A full reversal changes A . B . C . into . C . B . A.'
   };
 }
 
@@ -857,11 +961,188 @@ function constraintClue(difficulty: number): PuzzleRound {
     subtitle: 'Lexical search with multiple constraints',
     difficulty,
     isAssessment: false,
-    prompt: `Choose the ${length}-letter word that contains "${mustContain}" and fits the clue: ${answer === 'planet' ? 'world' : answer === 'silver' ? 'metallic color' : answer === 'garden' ? 'place for plants' : answer === 'signal' ? 'meaningful sign' : answer === 'memory' ? 'stored recall' : answer === 'switch' ? 'change over' : answer === 'reason' ? 'logical cause' : 'attention target'}.`,
-    visual: { mode: 'statement', note: `${length} letters / contains ${mustContain}` },
+    prompt: 'Choose the word that satisfies all constraints.',
+    visual: {
+      mode: 'rules',
+      note: 'Constraints',
+      lines: [
+        `${length} letters`,
+        `Contains "${mustContain}"`,
+        `Meaning: ${answer === 'planet' ? 'world' : answer === 'silver' ? 'metallic color' : answer === 'garden' ? 'place for plants' : answer === 'signal' ? 'meaningful sign' : answer === 'memory' ? 'stored recall' : answer === 'switch' ? 'change over' : answer === 'reason' ? 'logical cause' : 'attention target'}`
+      ]
+    },
     choices,
     correctIndex,
     explanation: `${answer} satisfies the length, letter, and meaning constraints.`
+  };
+}
+
+function routePlanner(difficulty: number, isAssessment = false): PuzzleRound {
+  const routes = [
+    { name: 'A-C-D', time: 7, risk: 3, reward: 4 },
+    { name: 'A-B-D', time: 6, risk: 5, reward: 3 },
+    { name: 'A-E-D', time: 9, risk: 1, reward: 6 }
+  ];
+  const limit = difficulty > 8 ? 8 : 9;
+  const feasible = routes.filter((route) => route.time <= limit);
+  const best = feasible.sort((a, b) => b.reward - a.reward || a.risk - b.risk)[0]!;
+  const { choices, correctIndex } = withAnswer(routes.map((route) => route.name), best.name);
+  return {
+    id: id(isAssessment ? 'route-assessment' : 'route-planner'),
+    domain: 'planning',
+    typeId: isAssessment ? 'route-assessment' : 'route-planner',
+    typeName: isAssessment ? 'Route Check' : 'Route Planner',
+    subtitle: 'Plan under constraints',
+    difficulty,
+    isAssessment,
+    prompt: `Choose the highest reward route with time <= ${limit}. Break ties by lower risk.`,
+    visual: {
+      mode: 'rules',
+      note: 'Routes',
+      lines: routes.map((route) => `${route.name}: time ${route.time}, risk ${route.risk}, reward ${route.reward}`)
+    },
+    choices,
+    correctIndex,
+    explanation: `${best.name} is feasible and has the best reward under the time limit.`
+  };
+}
+
+function resourceSchedule(difficulty: number): PuzzleRound {
+  const tasks = [
+    { name: 'Scan', time: 2, energy: 2, value: 3 },
+    { name: 'Sort', time: 3, energy: 1, value: 4 },
+    { name: 'Solve', time: 4, energy: 3, value: 7 },
+    { name: 'Review', time: 2, energy: 1, value: 2 }
+  ];
+  const timeLimit = 6;
+  const energyLimit = 4;
+  const combos = [
+    ['Scan', 'Sort'],
+    ['Sort', 'Solve'],
+    ['Scan', 'Review', 'Sort'],
+    ['Solve', 'Review']
+  ];
+  const scoreCombo = (combo: string[]) => combo.reduce(
+    (sum, name) => {
+      const task = tasks.find((item) => item.name === name)!;
+      return { time: sum.time + task.time, energy: sum.energy + task.energy, value: sum.value + task.value };
+    },
+    { time: 0, energy: 0, value: 0 }
+  );
+  const best = combos
+    .map((combo) => ({ combo, score: scoreCombo(combo) }))
+    .filter((item) => item.score.time <= timeLimit && item.score.energy <= energyLimit)
+    .sort((a, b) => b.score.value - a.score.value)[0]!;
+  const answer = best.combo.join(' + ');
+  const { choices, correctIndex } = withAnswer(combos.map((combo) => combo.join(' + ')), answer);
+  return {
+    id: id('resource-schedule'),
+    domain: 'planning',
+    typeId: 'resource-schedule',
+    typeName: 'Resource Schedule',
+    subtitle: 'Working through tradeoffs',
+    difficulty,
+    isAssessment: false,
+    prompt: `Maximize value with time <= ${timeLimit} and energy <= ${energyLimit}.`,
+    visual: {
+      mode: 'rules',
+      note: 'Tasks',
+      lines: tasks.map((task) => `${task.name}: time ${task.time}, energy ${task.energy}, value ${task.value}`)
+    },
+    choices,
+    correctIndex,
+    explanation: `${answer} fits both budgets and gives the highest listed value.`
+  };
+}
+
+function towerMoves(difficulty: number): PuzzleRound {
+  const answer = 'Small -> middle, large -> goal, small -> goal';
+  const { choices, correctIndex } = withAnswer(
+    ['Large -> goal, small -> goal, small -> middle', 'Small -> goal, large -> middle, small -> goal', 'Large -> middle, small -> goal, large -> goal'],
+    answer
+  );
+  return {
+    id: id('tower-moves'),
+    domain: 'planning',
+    typeId: 'tower-moves',
+    typeName: 'Tower Moves',
+    subtitle: 'Sequential planning',
+    difficulty,
+    isAssessment: false,
+    prompt: 'Which move plan transfers the stack legally?',
+    visual: { mode: 'rules', note: 'Start', lines: ['Start peg: small on large', 'Middle peg: empty', 'Goal peg: empty'] },
+    choices,
+    correctIndex,
+    explanation: 'Move the small piece out of the way, move the large piece, then place the small piece on top.'
+  };
+}
+
+function equationSystem(difficulty: number, isAssessment = false): PuzzleRound {
+  const x = 2 + Math.floor(Math.random() * 5);
+  const y = 1 + Math.floor(Math.random() * 4);
+  const sum = x + y;
+  const diff = x - y;
+  const answer = String(x);
+  const { choices, correctIndex } = withAnswer([String(y), String(sum), String(diff + y)], answer);
+  return {
+    id: id(isAssessment ? 'equation-check' : 'equation-system'),
+    domain: 'quantitative',
+    typeId: isAssessment ? 'equation-check' : 'equation-system',
+    typeName: isAssessment ? 'Equation Check' : 'Equation System',
+    subtitle: 'Symbolic numerical reasoning',
+    difficulty,
+    isAssessment,
+    prompt: 'Solve for X.',
+    visual: { mode: 'rules', note: 'Equations', lines: [`X + Y = ${sum}`, `X - Y = ${diff}`] },
+    choices,
+    correctIndex,
+    explanation: `Adding the equations gives 2X = ${sum + diff}, so X = ${x}.`
+  };
+}
+
+function ratioPuzzle(difficulty: number): PuzzleRound {
+  const a = 2 + Math.floor(Math.random() * 3);
+  const b = a + 1;
+  const total = (a + b) * 3;
+  const answer = String(b * 3);
+  const { choices, correctIndex } = withAnswer([String(a * 3), String(total - b), String(b * 2)], answer);
+  return {
+    id: id('ratio-puzzle'),
+    domain: 'quantitative',
+    typeId: 'ratio-puzzle',
+    typeName: 'Ratio Split',
+    subtitle: 'Proportional reasoning',
+    difficulty,
+    isAssessment: false,
+    prompt: `A:B = ${a}:${b}. If total is ${total}, what is B?`,
+    visual: { mode: 'statement', note: `${a} parts + ${b} parts = ${total}` },
+    choices,
+    correctIndex,
+    explanation: `There are ${a + b} parts; each is ${total / (a + b)}, so B is ${b} parts = ${answer}.`
+  };
+}
+
+function symbolicPattern(difficulty: number): PuzzleRound {
+  const rules = [
+    { symbol: 'triangle', value: 3 },
+    { symbol: 'circle', value: 2 },
+    { symbol: 'square', value: 4 }
+  ];
+  const answer = String(rules[0]!.value * rules[1]!.value + rules[2]!.value);
+  const { choices, correctIndex } = withAnswer([String(Number(answer) + 2), String(Number(answer) - 1), String(rules[0]!.value + rules[1]!.value + rules[2]!.value)], answer);
+  return {
+    id: id('symbolic-pattern'),
+    domain: 'quantitative',
+    typeId: 'symbolic-pattern',
+    typeName: 'Symbolic Pattern',
+    subtitle: 'Rule mapping and calculation',
+    difficulty,
+    isAssessment: false,
+    prompt: 'Use the symbol values to calculate triangle x circle + square.',
+    visual: { mode: 'rules', note: 'Values', lines: rules.map((rule) => `${rule.symbol} = ${rule.value}`) },
+    choices,
+    correctIndex,
+    explanation: `3 x 2 + 4 = ${answer}.`
   };
 }
 
@@ -870,8 +1151,10 @@ export const trainingGenerators: Record<CognitiveDomain, Generator[]> = {
   workingMemory: [sequenceRecall, numberChain, dualTrack, memoryGrid, operationSpan],
   attention: [colorWord, focusFire, stopSignal, oddPulse, conflictGrid],
   flexibility: [ruleFlip, trailBlaze, switchMath, categorySwap, ruleCascade],
-  reasoning: [nextInLine, interleavedSequence, matrixPick, oddOneOut, logicLock, balanceCode],
-  language: [wordScramble, quickClue, letterFlow, wordChain, verbalAnalogy, constraintClue]
+  reasoning: [nextInLine, interleavedSequence, matrixPick, oddOneOut, logicLock, balanceCode, logicGrid, conditionalSyllogism, spatialTransform],
+  language: [wordScramble, quickClue, letterFlow, wordChain, verbalAnalogy, constraintClue],
+  planning: [routePlanner, resourceSchedule, towerMoves, planningGrid],
+  quantitative: [equationSystem, ratioPuzzle, symbolicPattern, quantitativeBalance]
 };
 
 export const assessmentGenerators: Record<CognitiveDomain, Generator> = {
@@ -880,7 +1163,9 @@ export const assessmentGenerators: Record<CognitiveDomain, Generator> = {
   attention: (difficulty) => colorWord(difficulty, true),
   flexibility: (difficulty) => trailBlaze(difficulty, true),
   reasoning: grammaticalReasoning,
-  language: (difficulty) => numberChain(difficulty, true)
+  language: (difficulty) => numberChain(difficulty, true),
+  planning: (difficulty) => routePlanner(difficulty, true),
+  quantitative: (difficulty) => equationSystem(difficulty, true)
 };
 
 export function generateTrainingPuzzle(domain: CognitiveDomain, difficulty: number) {

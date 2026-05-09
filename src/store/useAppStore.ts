@@ -55,8 +55,17 @@ function setStore(partial: Partial<PersistedState>) {
 
 const actions = {
   recordAttempt: (attempt: PuzzleAttempt) => {
-    const previous = store.domains[attempt.domain];
-    const expectedMs = attempt.domain === 'processingSpeed' ? 1800 : attempt.domain === 'reasoning' ? 5200 : 3600;
+    const previous = store.domains[attempt.domain] ?? createInitialScores()[attempt.domain];
+    const expectedMs =
+      attempt.domain === 'processingSpeed'
+        ? 1800
+        : attempt.domain === 'reasoning'
+          ? 5200
+          : attempt.domain === 'planning'
+            ? 6500
+            : attempt.domain === 'quantitative'
+              ? 5400
+              : 3600;
     const nextLevel = adjustDifficulty(previous.currentLevel, attempt.accuracy, attempt.reactionTimeMs, expectedMs);
     const latestScore = attempt.isAssessment ? previous.latestScore : Math.round(previous.latestScore * 0.92 + attempt.accuracy * 100 * 0.08);
 
@@ -127,7 +136,12 @@ function hydrate() {
     .then((value) => {
       if (!value) return;
       const parsed = JSON.parse(value) as Partial<PersistedState>;
-      store = { ...store, ...parsed, ...actions };
+      store = {
+        ...store,
+        ...parsed,
+        domains: { ...createInitialScores(), ...(parsed.domains ?? {}) },
+        ...actions
+      };
       for (const listener of listeners) listener();
     })
     .catch(() => undefined);

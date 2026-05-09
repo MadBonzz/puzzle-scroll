@@ -41,11 +41,24 @@ export function PuzzleVisual({ visual }: Props) {
     );
   }
 
+  if (visual.mode === 'rules') {
+    return (
+      <View style={styles.rules}>
+        {visual.note ? <Text style={styles.rulesTitle}>{visual.note}</Text> : null}
+        {visual.lines?.map((line, index) => (
+          <Text key={`${line}-${index}`} style={styles.ruleLine}>
+            {line}
+          </Text>
+        ))}
+      </View>
+    );
+  }
+
   const columns = visual.columns ?? 3;
   return (
     <View style={styles.visualWrap}>
       {visual.note ? <Text style={styles.note}>{visual.note}</Text> : null}
-      <View style={[styles.grid, { maxWidth: columns * 76 }]}>
+      <View style={[styles.grid, { maxWidth: Math.min(columns * 64, 310) }]}>
         {visual.tokens?.map((item, index) => (
           <View style={{ width: `${100 / columns}%` }} key={`${item.label}-${index}`}>
             <TokenView token={item} />
@@ -59,9 +72,9 @@ export function PuzzleVisual({ visual }: Props) {
 const styles = StyleSheet.create({
   visualWrap: {
     alignItems: 'center',
-    gap: 12,
-    marginVertical: 18,
-    minHeight: 120,
+    gap: 8,
+    marginVertical: 10,
+    minHeight: 78,
     justifyContent: 'center'
   },
   grid: {
@@ -71,31 +84,31 @@ const styles = StyleSheet.create({
     justifyContent: 'center'
   },
   token: {
-    minHeight: 54,
-    margin: 5,
+    minHeight: 42,
+    margin: 3,
     borderRadius: 8,
     borderWidth: 1,
-    paddingHorizontal: 8,
+    paddingHorizontal: 6,
     alignItems: 'center',
     justifyContent: 'center'
   },
   tokenText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '800',
     textTransform: 'uppercase',
     textAlign: 'center'
   },
   comparison: {
-    minHeight: 150,
+    minHeight: 110,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 10,
-    marginVertical: 18
+    marginVertical: 10
   },
   compareSide: {
-    width: 118,
-    minHeight: 120,
+    width: 104,
+    minHeight: 96,
     justifyContent: 'center'
   },
   vs: {
@@ -103,20 +116,41 @@ const styles = StyleSheet.create({
     fontWeight: '800'
   },
   statement: {
-    minHeight: 130,
+    minHeight: 86,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 12,
-    marginVertical: 18
+    marginVertical: 10
   },
   statementText: {
     color: '#20242A',
-    fontSize: 24,
+    fontSize: 18,
+    lineHeight: 23,
     fontWeight: '900',
     textAlign: 'center'
   },
   note: {
     color: '#68717C',
     fontWeight: '700'
+  },
+  rules: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E0DED5',
+    padding: 10,
+    gap: 6,
+    marginVertical: 10
+  },
+  rulesTitle: {
+    color: '#20242A',
+    fontWeight: '900',
+    fontSize: 14
+  },
+  ruleLine: {
+    color: '#39414A',
+    fontWeight: '700',
+    fontSize: 13,
+    lineHeight: 18
   }
 });

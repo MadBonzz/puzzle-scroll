@@ -64,11 +64,11 @@ export function PuzzleCard({ puzzle, height, onAnswered }: Props) {
       <View style={[styles.card, { backgroundColor: domain.tint }]}>
         <View style={styles.header}>
           <View style={[styles.iconBadge, { backgroundColor: domain.color }]}>
-            <Feather name={domain.icon as never} size={18} color="#FFFFFF" />
+            <Feather name={domain.icon as never} size={16} color="#FFFFFF" />
           </View>
           <View style={styles.headerText}>
-            <Text style={[styles.domain, { color: domain.color }]}>{domain.label}</Text>
-            <Text style={styles.title}>
+            <Text numberOfLines={1} style={[styles.domain, { color: domain.color }]}>{domain.label}</Text>
+            <Text numberOfLines={1} adjustsFontSizeToFit style={styles.title}>
               {puzzle.typeName} - Lv {puzzle.difficulty}
             </Text>
           </View>
@@ -78,7 +78,7 @@ export function PuzzleCard({ puzzle, height, onAnswered }: Props) {
           <Text style={styles.subtitle}>{puzzle.subtitle}</Text>
           {phase === 'ready' ? (
             <View style={styles.readyPanel}>
-              <Text style={styles.prompt}>{puzzle.studyPrompt ?? 'Get ready to study the pattern.'}</Text>
+              <Text numberOfLines={5} adjustsFontSizeToFit style={styles.prompt}>{puzzle.studyPrompt ?? 'Get ready to study the pattern.'}</Text>
               <Text style={styles.readyText}>Start when you are ready. The study screen will disappear automatically.</Text>
               <Pressable style={[styles.primaryAction, { backgroundColor: domain.color }]} onPress={beginStudy}>
                 <Text style={styles.primaryActionText}>I'm ready</Text>
@@ -86,7 +86,7 @@ export function PuzzleCard({ puzzle, height, onAnswered }: Props) {
             </View>
           ) : (
             <>
-              <Text style={styles.prompt}>{phase === 'study' ? puzzle.studyPrompt ?? puzzle.prompt : puzzle.prompt}</Text>
+              <Text numberOfLines={5} adjustsFontSizeToFit style={styles.prompt}>{phase === 'study' ? puzzle.studyPrompt ?? puzzle.prompt : puzzle.prompt}</Text>
               <PuzzleVisual visual={phase === 'study' ? puzzle.studyVisual ?? puzzle.visual : puzzle.visual} />
               {phase === 'study' ? <Text style={styles.studyHint}>Study now. The question appears next.</Text> : null}
               {submitted ? (
@@ -118,7 +118,7 @@ export function PuzzleCard({ puzzle, height, onAnswered }: Props) {
                   wrongChoice && styles.choiceWrong
                 ]}
               >
-                <Text numberOfLines={2} adjustsFontSizeToFit style={[styles.choiceText, (active || correctChoice) && styles.choiceTextActive]}>
+                <Text numberOfLines={3} adjustsFontSizeToFit style={[styles.choiceText, (active || correctChoice) && styles.choiceTextActive]}>
                   {choice}
                 </Text>
               </Pressable>
@@ -145,13 +145,13 @@ export function PuzzleCard({ puzzle, height, onAnswered }: Props) {
 
 const styles = StyleSheet.create({
   outer: {
-    paddingHorizontal: 16,
-    paddingVertical: 12
+    paddingHorizontal: 10,
+    paddingVertical: 6
   },
   card: {
     flex: 1,
     borderRadius: 8,
-    padding: 18,
+    padding: 12,
     borderWidth: 1,
     borderColor: '#E0DED5',
     justifyContent: 'space-between'
@@ -159,11 +159,11 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12
+    gap: 9
   },
   iconBadge: {
-    width: 38,
-    height: 38,
+    width: 34,
+    height: 34,
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center'
@@ -172,44 +172,46 @@ const styles = StyleSheet.create({
     flex: 1
   },
   domain: {
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: '900',
     textTransform: 'uppercase'
   },
   title: {
     color: '#20242A',
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '900'
   },
   body: {
     flex: 1,
-    justifyContent: 'center'
+    justifyContent: 'flex-start',
+    paddingTop: 8
   },
   subtitle: {
     color: '#68717C',
     fontWeight: '800',
-    marginBottom: 12
+    fontSize: 13,
+    marginBottom: 8
   },
   prompt: {
     color: '#20242A',
-    fontSize: 25,
-    lineHeight: 31,
+    fontSize: 20,
+    lineHeight: 25,
     fontWeight: '900'
   },
   choices: {
-    gap: 10
+    gap: 8
   },
   choicesDisabled: {
     minHeight: 0
   },
   choice: {
-    minHeight: 48,
+    minHeight: 44,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#D3D7DD',
     backgroundColor: '#FFFFFF',
     justifyContent: 'center',
-    paddingHorizontal: 14
+    paddingHorizontal: 12
   },
   choiceActive: {
     borderColor: '#20242A',
@@ -226,32 +228,33 @@ const styles = StyleSheet.create({
   choiceText: {
     color: '#20242A',
     fontWeight: '800',
-    fontSize: 16,
+    fontSize: 15,
     textAlign: 'center'
   },
   choiceTextActive: {
     color: '#FFFFFF'
   },
   footer: {
-    minHeight: 58,
+    minHeight: 36,
     justifyContent: 'flex-end'
   },
   footerHint: {
     color: '#68717C',
-    fontWeight: '700'
+    fontWeight: '700',
+    fontSize: 12
   },
   readyPanel: {
-    gap: 16,
+    gap: 12,
     justifyContent: 'center'
   },
   readyText: {
     color: '#5D6670',
-    fontSize: 15,
-    lineHeight: 21,
+    fontSize: 14,
+    lineHeight: 20,
     fontWeight: '700'
   },
   primaryAction: {
-    minHeight: 52,
+    minHeight: 48,
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
@@ -271,7 +274,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderRadius: 8,
-    padding: 12,
+    padding: 10,
     gap: 4,
     marginTop: 10
   },
@@ -284,6 +287,8 @@ const styles = StyleSheet.create({
   },
   feedbackText: {
     color: '#39414A',
-    fontWeight: '700'
+    fontWeight: '700',
+    fontSize: 12,
+    lineHeight: 16
   }
 });

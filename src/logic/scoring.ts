@@ -25,7 +25,9 @@ export function scoreAssessment(domain: CognitiveDomain, accuracy: number, react
     attention: 2400,
     flexibility: 3800,
     reasoning: 5200,
-    language: 4200
+    language: 4200,
+    planning: 6500,
+    quantitative: 5400
   };
 
   return {

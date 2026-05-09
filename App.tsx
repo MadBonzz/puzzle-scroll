@@ -22,25 +22,30 @@ function FeedScreen() {
     () => generateDailySession(Object.fromEntries(domainIds.map((domain) => [domain, domainsState[domain].currentLevel])) as Record<CognitiveDomain, number>, 18),
     [domainsState]
   );
-  const cardHeight = Math.max(620, height - 92);
+  const cardHeight = Math.max(430, height - 148);
 
   return (
-    <FlatList
-      data={session}
-      keyExtractor={(item) => item.id}
-      pagingEnabled
-      snapToInterval={cardHeight}
-      decelerationRate="fast"
-      showsVerticalScrollIndicator={false}
-      ListHeaderComponent={
-        <View style={styles.summary}>
+    <View style={styles.screen}>
+      <View style={styles.appHeader}>
+        <View>
           <Text style={styles.kicker}>Daily Mix</Text>
-          <Text style={styles.screenTitle}>Scroll puzzles, not videos.</Text>
-          <Text style={styles.summaryText}>{streakDays}-day streak - adaptive mix across all six domains</Text>
+          <Text style={styles.appTitle}>PuzzleScroll</Text>
         </View>
-      }
-      renderItem={({ item }) => <PuzzleCard puzzle={item} height={cardHeight} onAnswered={recordAttempt} />}
-    />
+        <View style={styles.headerStat}>
+          <Text style={styles.headerStatValue}>{streakDays}</Text>
+          <Text style={styles.headerStatLabel}>day streak</Text>
+        </View>
+      </View>
+      <FlatList
+        data={session}
+        keyExtractor={(item) => item.id}
+        pagingEnabled
+        snapToInterval={cardHeight}
+        decelerationRate="fast"
+        showsVerticalScrollIndicator={false}
+        renderItem={({ item }) => <PuzzleCard puzzle={item} height={cardHeight} onAnswered={recordAttempt} />}
+      />
+    </View>
   );
 }
 
@@ -53,7 +58,7 @@ function ProfileScreen() {
   return (
     <ScrollView contentContainerStyle={styles.scrollContent}>
       <Text style={styles.kicker}>Brain Profile</Text>
-      <Text style={styles.screenTitle}>Six-domain progress</Text>
+      <Text style={styles.screenTitle}>{domains.length}-domain progress</Text>
       <View style={styles.chartPanel}>
         <RadarChart scores={domainScores} />
       </View>
@@ -107,7 +112,7 @@ function AssessScreen() {
     () => generateAssessmentBattery(Object.fromEntries(domainIds.map((domain) => [domain, domainScores[domain].currentLevel])) as Record<CognitiveDomain, number>),
     [batteryId, domainScores]
   );
-  const cardHeight = Math.max(620, height - 120);
+  const cardHeight = Math.max(430, height - 148);
 
   const onAnswered = (attempt: PuzzleAttempt) => {
     recordAttempt(attempt);
@@ -157,21 +162,24 @@ function AssessScreen() {
   }
 
   return (
-    <FlatList
-      data={battery}
-      keyExtractor={(item) => item.id}
-      pagingEnabled
-      snapToInterval={cardHeight}
-      decelerationRate="fast"
-      ListHeaderComponent={
-        <View style={styles.summary}>
+    <View style={styles.screen}>
+      <View style={styles.appHeader}>
+        <View>
           <Text style={styles.kicker}>Brain Check</Text>
-          <Text style={styles.screenTitle}>Six separate assessment tasks</Text>
-          <Text style={styles.summaryText}>Swipe through one task per domain. Results update your profile when all six are complete.</Text>
+          <Text style={styles.appTitle}>Assessment</Text>
         </View>
-      }
-      renderItem={({ item }) => <PuzzleCard puzzle={item} height={cardHeight} onAnswered={onAnswered} />}
-    />
+        <Text style={styles.headerNote}>1 per domain</Text>
+      </View>
+      <FlatList
+        data={battery}
+        keyExtractor={(item) => item.id}
+        pagingEnabled
+        snapToInterval={cardHeight}
+        decelerationRate="fast"
+        showsVerticalScrollIndicator={false}
+        renderItem={({ item }) => <PuzzleCard puzzle={item} height={cardHeight} onAnswered={onAnswered} />}
+      />
+    </View>
   );
 }
 
@@ -264,6 +272,49 @@ const styles = StyleSheet.create({
   },
   appBody: {
     flex: 1
+  },
+  screen: {
+    flex: 1
+  },
+  appHeader: {
+    minHeight: 76,
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E4E0D5',
+    backgroundColor: '#FFFDF8'
+  },
+  appTitle: {
+    color: '#20242A',
+    fontSize: 24,
+    lineHeight: 29,
+    fontWeight: '900'
+  },
+  headerStat: {
+    minWidth: 72,
+    borderRadius: 8,
+    backgroundColor: '#20242A',
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    alignItems: 'center'
+  },
+  headerStatValue: {
+    color: '#FFFFFF',
+    fontWeight: '900',
+    fontSize: 18
+  },
+  headerStatLabel: {
+    color: '#FFFFFF',
+    fontWeight: '800',
+    fontSize: 10
+  },
+  headerNote: {
+    color: '#5D6670',
+    fontWeight: '900'
   },
   summary: {
     paddingHorizontal: 20,
