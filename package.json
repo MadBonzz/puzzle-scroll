@@ -11,6 +11,7 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "build": "expo export --platform web",
+    "validate:puzzles": "node scripts/validate-hard-puzzles.mjs",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

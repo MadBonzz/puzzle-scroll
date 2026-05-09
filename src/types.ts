@@ -77,4 +77,9 @@ export interface PuzzleRound {
   choices: string[];
   correctIndex: number;
   explanation: string;
+  source?: {
+    title: string;
+    url: string;
+    note: string;
+  };
 }

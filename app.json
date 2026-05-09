@@ -10,6 +10,7 @@
     ],
     "orientation": "portrait",
     "scheme": "puzzlescroll",
+    "icon": "./public/icon-512.png",
     "userInterfaceStyle": "light",
     "assetBundlePatterns": [
       "**/*"
@@ -21,12 +22,14 @@
     "android": {
       "package": "com.puzzlescroll.app",
       "adaptiveIcon": {
+        "foregroundImage": "./public/icon-512.png",
         "backgroundColor": "#F7F4EA"
       }
     },
     "web": {
       "bundler": "metro",
-      "output": "single"
+      "output": "single",
+      "favicon": "./public/icon-192.png"
     }
   }
 }

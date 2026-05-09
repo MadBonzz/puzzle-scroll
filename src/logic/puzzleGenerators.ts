@@ -1,4 +1,5 @@
 import { domainIds } from '../data/domains';
+import { publicDomainSources } from '../data/sourcePuzzles';
 import type { CognitiveDomain, PuzzleRound, VisualToken } from '../types';
 
 type Generator = (difficulty: number, isAssessment?: boolean) => PuzzleRound;
@@ -99,7 +100,11 @@ function speedMatch(difficulty: number, isAssessment = false): PuzzleRound {
     difficulty,
     isAssessment,
     prompt: 'Are the two visual sets identical?',
-    visual: { mode: 'comparison', left, right, note: difficulty > 10 ? 'Brief exposure target' : undefined },
+    visual: { mode: 'comparison', left: hiddenTokens(left.length), right: hiddenTokens(right.length), note: 'Stimulus hidden' },
+    requiresReady: true,
+    studyPrompt: 'Compare both sides quickly. They will disappear.',
+    studyVisual: { mode: 'comparison', left, right, note: difficulty > 10 ? 'Brief exposure target' : undefined },
+    studyDurationMs: studyMs(difficulty, isAssessment ? 2200 : 1800),
     choices,
     correctIndex,
     explanation: shouldMatch ? 'Every feature matches.' : 'At least one shape or color changed.'
@@ -183,7 +188,11 @@ function symbolScan(difficulty: number): PuzzleRound {
     difficulty,
     isAssessment: false,
     prompt: `How many items are ${targetColor.name} ${targetShape}s?`,
-    visual: { mode: 'grid', tokens: shuffledTokens, columns: 4 },
+    visual: { mode: 'grid', tokens: hiddenTokens(shuffledTokens.length), columns: 4 },
+    requiresReady: true,
+    studyPrompt: `Count ${targetColor.name} ${targetShape}s. The grid will disappear.`,
+    studyVisual: { mode: 'grid', tokens: shuffledTokens, columns: 4 },
+    studyDurationMs: studyMs(difficulty, 2600),
     choices,
     correctIndex,
     explanation: `Only items matching both features count: ${targetColor.name} and ${targetShape}.`
@@ -205,7 +214,11 @@ function colorRush(difficulty: number): PuzzleRound {
     difficulty,
     isAssessment: false,
     prompt: `How many ${target.name} dots are in the stream?`,
-    visual: { mode: 'tiles', tokens: stream.map((color) => token('', color.value)), columns: 6 },
+    visual: { mode: 'tiles', tokens: hiddenTokens(stream.length), columns: 6 },
+    requiresReady: true,
+    studyPrompt: `Count only ${target.name} dots. The stream will disappear.`,
+    studyVisual: { mode: 'tiles', tokens: stream.map((color) => token('', color.value)), columns: 6 },
+    studyDurationMs: studyMs(difficulty, 2200),
     choices,
     correctIndex,
     explanation: `There are ${count} ${target.name} dots.`
@@ -412,7 +425,11 @@ function stopSignal(difficulty: number): PuzzleRound {
     difficulty,
     isAssessment: false,
     prompt: 'Tap circles only. How many taps should you make?',
-    visual: { mode: 'tiles', tokens: items.map((item) => token(item, item === 'circle' ? '#277A5B' : '#C8D0CC')), columns: items.length },
+    visual: { mode: 'tiles', tokens: hiddenTokens(items.length), columns: items.length },
+    requiresReady: true,
+    studyPrompt: 'Count only the go targets. Ignore the no-go shapes.',
+    studyVisual: { mode: 'tiles', tokens: items.map((item) => token(item, item === 'circle' ? '#277A5B' : '#C8D0CC')), columns: items.length },
+    studyDurationMs: studyMs(difficulty, 2200),
     choices,
     correctIndex,
     explanation: `Only circles count, so the answer is ${goCount}.`
@@ -432,7 +449,11 @@ function oddPulse(difficulty: number): PuzzleRound {
     difficulty,
     isAssessment: false,
     prompt: 'Tap on regular beats and stop on rest beats. How many taps?',
-    visual: { mode: 'tiles', tokens: beats.map((beat) => token(beat === 'tap' ? 'TAP' : 'REST', beat === 'tap' ? '#277A5B' : '#D9B657')), columns: 4 },
+    visual: { mode: 'tiles', tokens: hiddenTokens(beats.length), columns: 4 },
+    requiresReady: true,
+    studyPrompt: 'Count TAP beats and inhibit REST beats.',
+    studyVisual: { mode: 'tiles', tokens: beats.map((beat) => token(beat === 'tap' ? 'TAP' : 'REST', beat === 'tap' ? '#277A5B' : '#D9B657')), columns: 4 },
+    studyDurationMs: studyMs(difficulty, 2400),
     choices,
     correctIndex,
     explanation: `There are ${answer} regular tap beats.`
@@ -462,7 +483,11 @@ function conflictGrid(difficulty: number): PuzzleRound {
     difficulty,
     isAssessment: false,
     prompt: `Count words that say ${targetWord.name.toUpperCase()} in ${targetInk.name} ink.`,
-    visual: { mode: 'grid', tokens: shuffledTokens, columns: 3 },
+    visual: { mode: 'grid', tokens: hiddenTokens(shuffledTokens.length), columns: 3 },
+    requiresReady: true,
+    studyPrompt: `Count ${targetWord.name.toUpperCase()} words in ${targetInk.name} ink.`,
+    studyVisual: { mode: 'grid', tokens: shuffledTokens, columns: 3 },
+    studyDurationMs: studyMs(difficulty, 2600),
     choices,
     correctIndex,
     explanation: `A correct item must match both the written word and the ink color.`
@@ -559,7 +584,7 @@ function categorySwap(difficulty: number): PuzzleRound {
 function ruleCascade(difficulty: number): PuzzleRound {
   const item = { shape: pick(shapes), color: pick(colors), number: 2 + Math.floor(Math.random() * 8) };
   const firstRule = item.number % 2 === 0 ? 'color' : 'shape';
-  const secondRule = item.color.name.length > 4 ? 'number' : firstRule === 'color' ? 'shape' : 'color';
+  const secondRule = item.color.name.length > 4 ? 'number' : firstRule;
   const answer = secondRule === 'color' ? item.color.name : secondRule === 'shape' ? item.shape : item.number % 2 === 0 ? 'even' : 'odd';
   const options = secondRule === 'color' ? colors.map((color) => color.name) : secondRule === 'shape' ? shapes : ['even', 'odd', 'prime', 'square'];
   const { choices, correctIndex } = withAnswer(options, answer);
@@ -768,7 +793,7 @@ function planningGrid(difficulty: number): PuzzleRound {
 function conditionalSyllogism(difficulty: number): PuzzleRound {
   const answer = pick(['Mira studies logic', 'The task is skipped', 'The score is reviewed']);
   const middle = answer === 'Mira studies logic' ? 'Mira solves matrices' : answer === 'The task is skipped' ? 'The timer expires' : 'Accuracy drops';
-  const { choices, correctIndex } = withAnswer(['The first rule is false', middle, 'No conclusion follows'], answer);
+  const { choices, correctIndex } = withAnswer(['The first rule is false', 'The opposite conclusion follows', 'No conclusion follows'], answer);
   return {
     id: id('conditional-syllogism'),
     domain: 'reasoning',
@@ -898,11 +923,19 @@ function letterFlow(difficulty: number): PuzzleRound {
 }
 
 function wordChain(difficulty: number): PuzzleRound {
-  const first = pick(['mango', 'olive', 'eagle', 'lamp', 'pasta', 'anchor']);
-  const last = first[first.length - 1]!;
-  const pool = [...animals, ...foods, ...objects];
-  const answer = pool.find((word) => word[0] === last && word !== first) ?? 'eagle';
-  const { choices, correctIndex } = withAnswer(pool.filter((word) => word[0] !== last).slice(0, 6), answer);
+  const chains = [
+    ['mango', 'olive', 'eagle'],
+    ['lamp', 'pencil', 'lentil'],
+    ['anchor', 'reason', 'notion'],
+    ['pasta', 'apple', 'eagle']
+  ];
+  const chain = pick(chains);
+  const last = chain[chain.length - 1]!;
+  const required = last[last.length - 1]!;
+  const pool = [...animals, ...foods, ...objects, 'ember', 'logic', 'nectar', 'orbit'];
+  const answer = pool.find((word) => word[0] === required && !chain.includes(word)) ?? 'ember';
+  const distractors = pool.filter((word) => word[0] !== required && !chain.includes(word)).slice(0, 8);
+  const { choices, correctIndex } = withAnswer(distractors, answer);
   return {
     id: id('word-chain'),
     domain: 'language',
@@ -911,11 +944,11 @@ function wordChain(difficulty: number): PuzzleRound {
     subtitle: 'Last-letter verbal sequencing',
     difficulty,
     isAssessment: false,
-    prompt: `Continue the chain after "${first}".`,
-    visual: { mode: 'statement', note: `${first} -> ?` },
+    prompt: 'Continue the last-letter chain.',
+    visual: { mode: 'statement', note: `${chain.join(' -> ')} -> ?` },
     choices,
     correctIndex,
-    explanation: `${answer} starts with ${last.toUpperCase()}, the last letter of ${first}.`
+    explanation: `${answer} starts with ${required.toUpperCase()}, the last letter of ${last}.`
   };
 }
 
@@ -1077,6 +1110,61 @@ function towerMoves(difficulty: number): PuzzleRound {
   };
 }
 
+function weighingPuzzle(difficulty: number): PuzzleRound {
+  const answer = 'Coin 3';
+  const { choices, correctIndex } = withAnswer(['Coin 1', 'Coin 2', 'Coin 4'], answer);
+  return {
+    id: id('weighing-puzzle'),
+    domain: 'planning',
+    typeId: 'weighing-puzzle',
+    typeName: 'Weighing Puzzle',
+    subtitle: 'Classic balance-scale deduction',
+    difficulty,
+    isAssessment: false,
+    prompt: 'One coin is heavy. Use the weighings to identify it.',
+    visual: {
+      mode: 'rules',
+      note: 'Weighings',
+      lines: ['1 + 2 balances 4 + 5.', '1 + 3 is heavier than 2 + 4.', 'Only one coin is heavy; all others are normal.']
+    },
+    choices,
+    correctIndex,
+    explanation: 'The first weighing rules out 1, 2, 4, and 5 as uniquely heavy. The second can only be explained by coin 3 being heavy.',
+    source: {
+      title: publicDomainSources.dudeneyAmusements.title,
+      url: publicDomainSources.dudeneyAmusements.url,
+      note: 'Adapted from public-domain weighing/balance puzzle formats.'
+    }
+  };
+}
+
+function riverCrossingPlan(difficulty: number): PuzzleRound {
+  const answer = 'Guard takes A, returns, takes B, returns, takes C';
+  const { choices, correctIndex } = withAnswer(
+    ['Guard takes A, takes B, takes C', 'A crosses alone, then B, then C', 'Guard takes A and B, returns, takes C'],
+    answer
+  );
+  return {
+    id: id('river-crossing-plan'),
+    domain: 'planning',
+    typeId: 'river-crossing-plan',
+    typeName: 'River Plan',
+    subtitle: 'Sequential constraint planning',
+    difficulty,
+    isAssessment: false,
+    prompt: 'Only the guard can row. Boat holds guard plus one passenger. Which plan moves A, B, C across?',
+    visual: { mode: 'rules', note: 'Rules', lines: ['Boat requires the guard.', 'Boat holds at most 2 people.', 'All passengers must end on the far side.'] },
+    choices,
+    correctIndex,
+    explanation: 'The guard must shuttle each passenger one at a time, returning after A and B before taking C.',
+    source: {
+      title: publicDomainSources.dudeneyAmusements.title,
+      url: publicDomainSources.dudeneyAmusements.url,
+      note: 'Adapted from public-domain river-crossing puzzle formats.'
+    }
+  };
+}
+
 function equationSystem(difficulty: number, isAssessment = false): PuzzleRound {
   const x = 2 + Math.floor(Math.random() * 5);
   const y = 1 + Math.floor(Math.random() * 4);
@@ -1096,7 +1184,12 @@ function equationSystem(difficulty: number, isAssessment = false): PuzzleRound {
     visual: { mode: 'rules', note: 'Equations', lines: [`X + Y = ${sum}`, `X - Y = ${diff}`] },
     choices,
     correctIndex,
-    explanation: `Adding the equations gives 2X = ${sum + diff}, so X = ${x}.`
+    explanation: `Adding the equations gives 2X = ${sum + diff}, so X = ${x}.`,
+    source: {
+      title: publicDomainSources.classicRecreations.title,
+      url: publicDomainSources.classicRecreations.url,
+      note: 'Adapted from public-domain algebraic recreation formats.'
+    }
   };
 }
 
@@ -1118,7 +1211,12 @@ function ratioPuzzle(difficulty: number): PuzzleRound {
     visual: { mode: 'statement', note: `${a} parts + ${b} parts = ${total}` },
     choices,
     correctIndex,
-    explanation: `There are ${a + b} parts; each is ${total / (a + b)}, so B is ${b} parts = ${answer}.`
+    explanation: `There are ${a + b} parts; each is ${total / (a + b)}, so B is ${b} parts = ${answer}.`,
+    source: {
+      title: publicDomainSources.classicRecreations.title,
+      url: publicDomainSources.classicRecreations.url,
+      note: 'Adapted from public-domain proportion puzzle formats.'
+    }
   };
 }
 
@@ -1142,7 +1240,214 @@ function symbolicPattern(difficulty: number): PuzzleRound {
     visual: { mode: 'rules', note: 'Values', lines: rules.map((rule) => `${rule.symbol} = ${rule.value}`) },
     choices,
     correctIndex,
-    explanation: `3 x 2 + 4 = ${answer}.`
+    explanation: `3 x 2 + 4 = ${answer}.`,
+    source: {
+      title: publicDomainSources.dudeneyAmusements.title,
+      url: publicDomainSources.dudeneyAmusements.url,
+      note: 'Adapted from public-domain symbolic arithmetic puzzle formats.'
+    }
+  };
+}
+
+function seatingDeduction(difficulty: number): PuzzleRound {
+  const arrangement = ['Eli', 'Dev', 'Ari', 'Bea', 'Cy'];
+  const answer = 'Ari';
+  const { choices, correctIndex } = withAnswer(['Eli', 'Dev', 'Bea', 'Cy'], answer);
+  return {
+    id: id('seating-deduction'),
+    domain: 'planning',
+    typeId: 'seating-deduction',
+    typeName: 'Seating Deduction',
+    subtitle: 'CAT-style ordering puzzle',
+    difficulty,
+    isAssessment: false,
+    prompt: 'Five people sit in a row. Who is in the middle?',
+    visual: {
+      mode: 'rules',
+      note: 'Clues',
+      lines: [
+        'Eli is at the far left.',
+        'Dev sits immediately to the right of Eli.',
+        'Bea sits immediately to the left of Cy.',
+        'Ari is not at either end.',
+        'Only one arrangement satisfies all clues.'
+      ]
+    },
+    choices,
+    correctIndex,
+    explanation: `The only valid order is ${arrangement.join(' - ')}, so Ari is in the middle.`,
+    source: {
+      title: publicDomainSources.dudeneyCanterbury.title,
+      url: publicDomainSources.dudeneyCanterbury.url,
+      note: 'Adapted from public-domain arrangement/logic puzzle formats.'
+    }
+  };
+}
+
+function suspectDeduction(difficulty: number): PuzzleRound {
+  const answer = 'Nora';
+  const { choices, correctIndex } = withAnswer(['Omar', 'Pia', 'Quinn'], answer);
+  return {
+    id: id('suspect-deduction'),
+    domain: 'reasoning',
+    typeId: 'suspect-deduction',
+    typeName: 'Suspect Deduction',
+    subtitle: 'Constraint satisfaction with testimony',
+    difficulty,
+    isAssessment: false,
+    prompt: 'Exactly one statement is false. Who took the key?',
+    visual: {
+      mode: 'rules',
+      note: 'Statements',
+      lines: [
+        'Pia: Quinn did not take it.',
+        'Omar: Nora took it.',
+        'Omar: Pia did not take it.',
+        'Quinn: Quinn took it.'
+      ]
+    },
+    choices,
+    correctIndex,
+    explanation: 'If Nora took it, only one statement is false. Other suspects make more than one statement false.',
+    source: {
+      title: publicDomainSources.dudeneyCanterbury.title,
+      url: publicDomainSources.dudeneyCanterbury.url,
+      note: 'Adapted from public-domain truth-teller/liar puzzle formats.'
+    }
+  };
+}
+
+function dataSufficiency(difficulty: number): PuzzleRound {
+  const { choices, correctIndex } = withAnswer(['I alone only', 'II alone only', 'Together only'], 'Each alone is sufficient');
+  return {
+    id: id('data-sufficiency'),
+    domain: 'quantitative',
+    typeId: 'data-sufficiency',
+    typeName: 'Data Sufficiency',
+    subtitle: 'GMAT-style sufficiency judgment',
+    difficulty,
+    isAssessment: false,
+    prompt: 'Can you determine X?',
+    visual: {
+      mode: 'rules',
+      note: 'Problem',
+      lines: ['Stem: X + Y = 10.', 'I. X - Y = 2.', 'II. Y = 4.']
+    },
+    choices,
+    correctIndex,
+    explanation: 'I with the stem gives X=6. II with the stem also gives X=6. Each alone is sufficient.',
+    source: {
+      title: publicDomainSources.classicRecreations.title,
+      url: publicDomainSources.classicRecreations.url,
+      note: 'Data-sufficiency presentation with public-domain algebra content.'
+    }
+  };
+}
+
+function criticalAssumption(difficulty: number): PuzzleRound {
+  const answer = 'The delay is mainly caused by review time.';
+  const { choices, correctIndex } = withAnswer(
+    ['More reviewers always improve quality.', 'Customers prefer slower releases.', 'The team can hire immediately.'],
+    answer
+  );
+  return {
+    id: id('critical-assumption'),
+    domain: 'language',
+    typeId: 'critical-assumption',
+    typeName: 'Critical Assumption',
+    subtitle: 'Argument reasoning',
+    difficulty,
+    isAssessment: false,
+    prompt: 'Which assumption does the argument need?',
+    visual: {
+      mode: 'rules',
+      note: 'Argument',
+      lines: [
+        'A team wants faster releases.',
+        'It plans to cut review steps in half.',
+        'Therefore releases will become faster without changing team size.'
+      ]
+    },
+    choices,
+    correctIndex,
+    explanation: 'The plan only supports the conclusion if review time is the main bottleneck.',
+    source: {
+      title: publicDomainSources.classicRecreations.title,
+      url: publicDomainSources.classicRecreations.url,
+      note: 'Argument structure is app-authored; included in validation bank.'
+    }
+  };
+}
+
+function workRate(difficulty: number): PuzzleRound {
+  const answer = '6 hours';
+  const { choices, correctIndex } = withAnswer(['5 hours', '8 hours', '10 hours'], answer);
+  return {
+    id: id('work-rate'),
+    domain: 'quantitative',
+    typeId: 'work-rate',
+    typeName: 'Work Rate',
+    subtitle: 'CAT/GMAT rate reasoning',
+    difficulty,
+    isAssessment: false,
+    prompt: 'A can finish in 10h, B in 15h. Together?',
+    visual: { mode: 'rules', note: 'Rates', lines: ['A rate = 1/10 job per hour.', 'B rate = 1/15 job per hour.', 'Combined time = 1 / combined rate.'] },
+    choices,
+    correctIndex,
+    explanation: '1/10 + 1/15 = 5/30 = 1/6 job per hour, so together they take 6 hours.',
+    source: {
+      title: publicDomainSources.dudeneyAmusements.title,
+      url: publicDomainSources.dudeneyAmusements.url,
+      note: 'Adapted from public-domain work-rate arithmetic formats.'
+    }
+  };
+}
+
+function mixturePuzzle(difficulty: number): PuzzleRound {
+  const answer = '30%';
+  const { choices, correctIndex } = withAnswer(['25%', '35%', '40%'], answer);
+  return {
+    id: id('mixture-puzzle'),
+    domain: 'quantitative',
+    typeId: 'mixture-puzzle',
+    typeName: 'Mixture',
+    subtitle: 'Weighted average reasoning',
+    difficulty,
+    isAssessment: false,
+    prompt: 'Mix equal amounts of 20% and 40% solution. Result?',
+    visual: { mode: 'rules', note: 'Mixture', lines: ['Equal amounts mean simple average.', '(20 + 40) / 2'] },
+    choices,
+    correctIndex,
+    explanation: 'With equal quantities, the concentration is the average: 30%.',
+    source: {
+      title: publicDomainSources.dudeneyAmusements.title,
+      url: publicDomainSources.dudeneyAmusements.url,
+      note: 'Adapted from public-domain mixture/average puzzle formats.'
+    }
+  };
+}
+
+function crypticClue(difficulty: number): PuzzleRound {
+  const answer = 'listen';
+  const { choices, correctIndex } = withAnswer(['silent', 'enlist', 'inlets'], answer);
+  return {
+    id: id('cryptic-clue'),
+    domain: 'language',
+    typeId: 'cryptic-clue',
+    typeName: 'Cryptic Clue',
+    subtitle: 'Crossword-style wordplay',
+    difficulty,
+    isAssessment: false,
+    prompt: 'Solve the clue.',
+    visual: { mode: 'rules', note: 'Clue', lines: ['Pay attention: anagram of ENLIST.', 'Meaning: hear carefully.'] },
+    choices,
+    correctIndex,
+    explanation: 'LISTEN is an anagram of ENLIST and means to hear carefully.',
+    source: {
+      title: publicDomainSources.classicRecreations.title,
+      url: publicDomainSources.classicRecreations.url,
+      note: 'Adapted from public-domain anagram/wordplay formats.'
+    }
   };
 }
 
@@ -1151,10 +1456,10 @@ export const trainingGenerators: Record<CognitiveDomain, Generator[]> = {
   workingMemory: [sequenceRecall, numberChain, dualTrack, memoryGrid, operationSpan],
   attention: [colorWord, focusFire, stopSignal, oddPulse, conflictGrid],
   flexibility: [ruleFlip, trailBlaze, switchMath, categorySwap, ruleCascade],
-  reasoning: [nextInLine, interleavedSequence, matrixPick, oddOneOut, logicLock, balanceCode, logicGrid, conditionalSyllogism, spatialTransform],
-  language: [wordScramble, quickClue, letterFlow, wordChain, verbalAnalogy, constraintClue],
-  planning: [routePlanner, resourceSchedule, towerMoves, planningGrid],
-  quantitative: [equationSystem, ratioPuzzle, symbolicPattern, quantitativeBalance]
+  reasoning: [nextInLine, interleavedSequence, matrixPick, oddOneOut, logicLock, balanceCode, logicGrid, conditionalSyllogism, spatialTransform, suspectDeduction],
+  language: [wordScramble, quickClue, letterFlow, wordChain, verbalAnalogy, constraintClue, criticalAssumption, crypticClue],
+  planning: [routePlanner, resourceSchedule, towerMoves, planningGrid, seatingDeduction, weighingPuzzle, riverCrossingPlan],
+  quantitative: [equationSystem, ratioPuzzle, symbolicPattern, quantitativeBalance, dataSufficiency, workRate, mixturePuzzle]
 };
 
 export const assessmentGenerators: Record<CognitiveDomain, Generator> = {

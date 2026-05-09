@@ -1,9 +1,10 @@
 import { Feather } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { FlatList, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { domains, domainIds } from './src/data/domains';
+import { publicDomainSources } from './src/data/sourcePuzzles';
 import { generateAssessmentBattery, generateDailySession } from './src/logic/puzzleGenerators';
 import { scoreAssessment } from './src/logic/scoring';
 import { useAppStore } from './src/store/useAppStore';
@@ -12,6 +13,47 @@ import { PuzzleCard } from './src/components/PuzzleCard';
 import { RadarChart } from './src/components/RadarChart';
 
 type Tab = 'feed' | 'profile' | 'assess' | 'settings';
+
+function usePwaInstallSupport() {
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+
+    document.title = 'PuzzleScroll';
+
+    const ensureLink = (rel: string, href: string, extra?: Record<string, string>) => {
+      let link = document.querySelector(`link[rel="${rel}"]`) as HTMLLinkElement | null;
+      if (!link) {
+        link = document.createElement('link');
+        link.rel = rel;
+        document.head.appendChild(link);
+      }
+      link.href = href;
+      if (extra) Object.entries(extra).forEach(([key, value]) => link?.setAttribute(key, value));
+    };
+
+    const ensureMeta = (name: string, content: string) => {
+      let meta = document.querySelector(`meta[name="${name}"]`) as HTMLMetaElement | null;
+      if (!meta) {
+        meta = document.createElement('meta');
+        meta.name = name;
+        document.head.appendChild(meta);
+      }
+      meta.content = content;
+    };
+
+    ensureLink('manifest', '/manifest.json');
+    ensureLink('icon', '/icon.svg', { type: 'image/svg+xml' });
+    ensureLink('apple-touch-icon', '/maskable-icon.svg');
+    ensureMeta('theme-color', '#FFFDF8');
+    ensureMeta('apple-mobile-web-app-capable', 'yes');
+    ensureMeta('apple-mobile-web-app-title', 'PuzzleScroll');
+    ensureMeta('mobile-web-app-capable', 'yes');
+
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/service-worker.js').catch(() => undefined);
+    }
+  }, []);
+}
 
 function FeedScreen() {
   const { height } = useWindowDimensions();
@@ -201,6 +243,10 @@ function SettingsScreen() {
         title="Puzzle generation"
         body="Each domain uses multiple task families with parameterized generators for sequences, visual features, categories, arithmetic switches, constraints, clues, and assessment variants."
       />
+      <InfoBlock
+        title="Hard puzzle sources"
+        body={`Harder puzzle formats are adapted from public-domain recreational mathematics sources, especially ${publicDomainSources.dudeneyAmusements.title} and ${publicDomainSources.dudeneyCanterbury.title}.`}
+      />
       <Pressable style={styles.dangerButton} onPress={resetProgress}>
         <Text style={styles.dangerButtonText}>Reset local progress</Text>
       </Pressable>
@@ -258,6 +304,8 @@ function AppShell() {
 }
 
 export default function App() {
+  usePwaInstallSupport();
+
   return (
     <SafeAreaProvider>
       <AppShell />

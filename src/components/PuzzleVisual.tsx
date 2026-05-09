@@ -140,7 +140,8 @@ const styles = StyleSheet.create({
     borderColor: '#E0DED5',
     padding: 10,
     gap: 6,
-    marginVertical: 10
+    marginVertical: 10,
+    flexShrink: 1
   },
   rulesTitle: {
     color: '#20242A',

@@ -1,7 +1,7 @@
 import * as Haptics from 'expo-haptics';
 import { Feather } from '@expo/vector-icons';
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { domainById } from '../data/domains';
 import type { PuzzleAttempt, PuzzleRound } from '../types';
 import { PuzzleVisual } from './PuzzleVisual';
@@ -74,7 +74,7 @@ export function PuzzleCard({ puzzle, height, onAnswered }: Props) {
           </View>
         </View>
 
-        <View style={styles.body}>
+        <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent} nestedScrollEnabled showsVerticalScrollIndicator={false}>
           <Text style={styles.subtitle}>{puzzle.subtitle}</Text>
           {phase === 'ready' ? (
             <View style={styles.readyPanel}>
@@ -100,7 +100,7 @@ export function PuzzleCard({ puzzle, height, onAnswered }: Props) {
               ) : null}
             </>
           )}
-        </View>
+        </ScrollView>
 
         <View style={[styles.choices, phase !== 'answer' && styles.choicesDisabled]}>
           {phase === 'answer' ? puzzle.choices.map((choice, index) => {
@@ -118,25 +118,37 @@ export function PuzzleCard({ puzzle, height, onAnswered }: Props) {
                   wrongChoice && styles.choiceWrong
                 ]}
               >
-                <Text numberOfLines={3} adjustsFontSizeToFit style={[styles.choiceText, (active || correctChoice) && styles.choiceTextActive]}>
-                  {choice}
-                </Text>
+                <View style={styles.choiceContent}>
+                  <Text numberOfLines={3} adjustsFontSizeToFit style={[styles.choiceText, (active || correctChoice) && styles.choiceTextActive]}>
+                    {choice}
+                  </Text>
+                  {correctChoice ? <Feather name="check-circle" size={20} color="#FFFFFF" /> : null}
+                  {wrongChoice ? <Feather name="x-circle" size={20} color="#FFFFFF" /> : null}
+                </View>
               </Pressable>
             );
           }) : null}
         </View>
 
-        <View style={styles.footer}>
-          {submitted ? (
-            <View style={styles.feedback}>
-              <Text style={[styles.feedbackTitle, { color: isCorrect ? '#277A5B' : '#C84E2F' }]}>{isCorrect ? 'Correct' : 'Missed'}</Text>
-              <Text style={styles.feedbackText}>{puzzle.explanation}</Text>
-            </View>
-          ) : (
-            <Text style={styles.footerHint}>
-              {phase === 'ready' ? 'Press ready before the timed display begins.' : phase === 'study' ? 'Memorize what you see.' : 'Answer, then swipe up for another puzzle.'}
+        {submitted ? (
+          <View style={[styles.resultBar, { backgroundColor: isCorrect ? '#277A5B' : '#C84E2F' }]}>
+            <Feather name={isCorrect ? 'check-circle' : 'x-circle'} size={18} color="#FFFFFF" />
+            <Text style={styles.resultBarText}>
+              {isCorrect ? 'Correct' : `Incorrect - correct answer: ${puzzle.choices[puzzle.correctIndex]}`}
             </Text>
-          )}
+          </View>
+        ) : null}
+
+        <View style={styles.footer}>
+          <Text style={styles.footerHint}>
+            {submitted
+              ? 'Result saved. Swipe up for another puzzle.'
+              : phase === 'ready'
+                ? 'Press ready before the timed display begins.'
+                : phase === 'study'
+                  ? 'Memorize what you see.'
+                  : 'Answer, then swipe up for another puzzle.'}
+          </Text>
         </View>
       </View>
     </View>
@@ -183,8 +195,13 @@ const styles = StyleSheet.create({
   },
   body: {
     flex: 1,
+    minHeight: 0
+  },
+  bodyContent: {
+    flexGrow: 1,
     justifyContent: 'flex-start',
-    paddingTop: 8
+    paddingTop: 8,
+    paddingBottom: 8
   },
   subtitle: {
     color: '#68717C',
@@ -229,7 +246,8 @@ const styles = StyleSheet.create({
     color: '#20242A',
     fontWeight: '800',
     fontSize: 15,
-    textAlign: 'center'
+    textAlign: 'center',
+    flex: 1
   },
   choiceTextActive: {
     color: '#FFFFFF'
@@ -269,6 +287,26 @@ const styles = StyleSheet.create({
     color: '#68717C',
     fontWeight: '800',
     textAlign: 'center'
+  },
+  choiceContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8
+  },
+  resultBar: {
+    minHeight: 38,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    marginTop: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8
+  },
+  resultBarText: {
+    color: '#FFFFFF',
+    fontWeight: '900',
+    flex: 1
   },
   feedbackPanel: {
     backgroundColor: '#FFFFFF',

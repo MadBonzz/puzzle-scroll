@@ -3,5 +3,11 @@
   "compilerOptions": {
     "strict": true,
     "noUncheckedIndexedAccess": true
-  }
+  },
+  "exclude": [
+    "node_modules",
+    "dist",
+    "web-build",
+    ".expo"
+  ]
 }
