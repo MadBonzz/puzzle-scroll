@@ -9,6 +9,8 @@ export type CognitiveDomain =
   | 'quantitative';
 
 export type Trend = 'improving' | 'stable' | 'declining';
+export type FeedMode = 'mixed' | 'fastReflex' | 'deepReasoning' | 'mathSprint' | 'memory' | 'calmFocus' | 'hardLogic';
+export type SessionGoal = 'short' | 'standard' | 'long' | 'threeMisses';
 
 export interface DomainScore {
   currentLevel: number;
@@ -34,6 +36,8 @@ export interface PuzzleAttempt {
 export interface FeedSettings {
   enabledDomains: CognitiveDomain[];
   enabledPuzzleTypes: string[];
+  mode: FeedMode;
+  sessionGoal: SessionGoal;
 }
 
 export interface Assessment {
@@ -79,6 +83,9 @@ export interface PuzzleRound {
   studyPrompt?: string;
   studyVisual?: PuzzleVisual;
   studyDurationMs?: number;
+  interferencePrompt?: string;
+  interferenceVisual?: PuzzleVisual;
+  interferenceDurationMs?: number;
   choices: string[];
   correctIndex: number;
   explanation: string;

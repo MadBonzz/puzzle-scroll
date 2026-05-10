@@ -1,18 +1,39 @@
 import { Feather } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { PanResponder, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Modal, PanResponder, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { domains, domainIds } from './src/data/domains';
 import { publicDomainSources } from './src/data/sourcePuzzles';
 import { generateAssessmentBattery, generateDailySession, trainingGeneratorEntries } from './src/logic/puzzleGenerators';
 import { scoreAssessment } from './src/logic/scoring';
 import { useAppStore } from './src/store/useAppStore';
-import type { AssessmentScore, CognitiveDomain, PuzzleAttempt } from './src/types';
+import type { AssessmentScore, CognitiveDomain, FeedMode, PuzzleAttempt, SessionGoal } from './src/types';
 import { PuzzleCard } from './src/components/PuzzleCard';
 import { RadarChart } from './src/components/RadarChart';
 
 type Tab = 'feed' | 'profile' | 'assess' | 'settings';
+
+const feedModes: { id: FeedMode; label: string; note: string }[] = [
+  { id: 'mixed', label: 'Mixed Daily', note: 'Balanced with weak-area bias' },
+  { id: 'fastReflex', label: 'Fast Reflex', note: 'Speed, inhibition, switching' },
+  { id: 'deepReasoning', label: 'Deep Reasoning', note: 'Logic, planning, quant' },
+  { id: 'mathSprint', label: 'Math Sprint', note: 'Quant and quick arithmetic' },
+  { id: 'memory', label: 'Memory', note: 'Span, delayed recall, updating' },
+  { id: 'calmFocus', label: 'Calm Focus', note: 'Attention without feed noise' },
+  { id: 'hardLogic', label: 'Hard Logic', note: 'Hard types only' }
+];
+
+const sessionGoals: { id: SessionGoal; label: string; count: number }[] = [
+  { id: 'short', label: '5 min', count: 8 },
+  { id: 'standard', label: '10 min', count: 18 },
+  { id: 'long', label: '20 min', count: 32 },
+  { id: 'threeMisses', label: '3 misses', count: 60 }
+];
+
+const todayKey = () => new Date().toISOString().slice(0, 10);
+const sessionCount = (goal: SessionGoal) => sessionGoals.find((item) => item.id === goal)?.count ?? 18;
+const hardTypeIds = new Set(domainIds.flatMap((domain) => trainingGeneratorEntries[domain].filter((entry) => entry.complexity === 'Hard').map((entry) => entry.typeId)));
 
 function usePwaInstallSupport() {
   useEffect(() => {
@@ -61,22 +82,71 @@ function FeedScreen() {
   const feedSettings = useAppStore((state) => state.feedSettings);
   const recordAttempt = useAppStore((state) => state.recordAttempt);
   const streakDays = useAppStore((state) => state.streakDays);
-  const buildSession = () =>
+  const buildSession = () => {
+    const enabledDomains = feedSettings.enabledDomains.length ? feedSettings.enabledDomains : domainIds;
+    const weakestDomains = [...enabledDomains].sort((a, b) => domainsState[a].latestScore - domainsState[b].latestScore).slice(0, 2);
+    const domainSequence = feedSettings.mode === 'mixed' ? [...enabledDomains, ...weakestDomains, ...weakestDomains] : enabledDomains;
+    return (
     generateDailySession(
       Object.fromEntries(domainIds.map((domain) => [domain, domainsState[domain].currentLevel])) as Record<CognitiveDomain, number>,
-      18,
-      feedSettings
+      sessionCount(feedSettings.sessionGoal),
+      { ...feedSettings, domainSequence }
+    )
     );
+  };
   const [session, setSession] = useState(buildSession);
   const cardHeight = Math.max(430, height - 148);
   const [index, setIndex] = useState(0);
+  const [missCount, setMissCount] = useState(0);
+  const [sessionEnded, setSessionEnded] = useState(false);
   const current = session[index] ?? session[0];
-  const goNext = () => setIndex((value) => Math.min(value + 1, session.length - 1));
+  const goNext = () => {
+    if (feedSettings.sessionGoal === 'threeMisses' && missCount >= 3) {
+      setSessionEnded(true);
+      return;
+    }
+    setIndex((value) => Math.min(value + 1, session.length - 1));
+  };
   const goPrevious = () => setIndex((value) => Math.max(value - 1, 0));
-  useEffect(() => {
+  const restartSession = () => {
     setSession(buildSession());
     setIndex(0);
+    setMissCount(0);
+    setSessionEnded(false);
+  };
+  const onAnswered = (attempt: PuzzleAttempt) => {
+    recordAttempt(attempt);
+    if (feedSettings.sessionGoal === 'threeMisses' && attempt.accuracy < 1) {
+      setMissCount((value) => value + 1);
+    }
+  };
+  useEffect(() => {
+    restartSession();
   }, [feedSettings]);
+
+  if (sessionEnded) {
+    return (
+      <View style={styles.screen}>
+        <View style={styles.appHeader}>
+          <View>
+            <Text style={styles.kicker}>Session Complete</Text>
+            <Text style={styles.appTitle}>3 misses reached</Text>
+          </View>
+          <View style={styles.headerStat}>
+            <Text style={styles.headerStatValue}>{index + 1}</Text>
+            <Text style={styles.headerStatLabel}>seen</Text>
+          </View>
+        </View>
+        <View style={styles.completionPanel}>
+          <Text style={styles.screenTitle}>Stop while it still counts</Text>
+          <Text style={styles.summaryText}>This mode ends when you miss three puzzles, so the session stays focused instead of becoming an endless scroll.</Text>
+          <Pressable style={styles.primaryButton} onPress={restartSession}>
+            <Text style={styles.primaryButtonText}>Start another session</Text>
+          </Pressable>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.screen}>
@@ -91,7 +161,7 @@ function FeedScreen() {
         </View>
       </View>
       <SwipePager index={index} total={session.length} onPrevious={goPrevious} onNext={goNext}>
-        {current ? <PuzzleCard key={current.id} puzzle={current} height={cardHeight} onAnswered={recordAttempt} /> : null}
+        {current ? <PuzzleCard key={current.id} puzzle={current} height={cardHeight} onAnswered={onAnswered} /> : null}
       </SwipePager>
       <PagerControls index={index} total={session.length} onPrevious={goPrevious} onNext={goNext} />
     </View>
@@ -103,6 +173,14 @@ function ProfileScreen() {
   const attempts = useAppStore((state) => state.attempts);
   const totalTrainingMinutes = useAppStore((state) => state.totalTrainingMinutes);
   const assessments = useAppStore((state) => state.assessments);
+  const practiceAttempts = attempts.filter((attempt) => !attempt.isAssessment);
+  const recent = practiceAttempts.slice(0, 30);
+  const recentAccuracy = recent.length ? Math.round((recent.reduce((sum, attempt) => sum + attempt.accuracy, 0) / recent.length) * 100) : 0;
+  const avgReaction = recent.length ? Math.round(recent.reduce((sum, attempt) => sum + attempt.reactionTimeMs, 0) / recent.length / 100) / 10 : 0;
+  const hardAttempts = practiceAttempts.filter((attempt) => hardTypeIds.has(attempt.puzzleType)).length;
+  const correctStreak = practiceAttempts.findIndex((attempt) => attempt.accuracy < 1);
+  const qualityStreak = correctStreak === -1 ? practiceAttempts.length : correctStreak;
+  const cognitiveFitness = recent.length ? Math.round(recentAccuracy * 0.7 + Math.min(30, hardAttempts) * 0.5 + Math.min(20, qualityStreak) * 0.75) : 50;
 
   return (
     <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -113,9 +191,19 @@ function ProfileScreen() {
       </View>
 
       <View style={styles.statsRow}>
-        <Metric label="Puzzles" value={String(attempts.filter((attempt) => !attempt.isAssessment).length)} />
+        <Metric label="Puzzles" value={String(practiceAttempts.length)} />
         <Metric label="Minutes" value={String(Math.round(totalTrainingMinutes))} />
         <Metric label="Checks" value={String(assessments.length)} />
+      </View>
+      <View style={styles.statsRow}>
+        <Metric label="Fitness" value={String(Math.min(100, cognitiveFitness))} />
+        <Metric label="Accuracy" value={`${recentAccuracy}%`} />
+        <Metric label="Avg sec" value={String(avgReaction)} />
+      </View>
+      <View style={styles.statsRow}>
+        <Metric label="Quality streak" value={String(qualityStreak)} />
+        <Metric label="Hard solved" value={String(hardAttempts)} />
+        <Metric label="Deep min" value={String(Math.round(practiceAttempts.filter((attempt) => hardTypeIds.has(attempt.puzzleType)).reduce((sum, attempt) => sum + attempt.reactionTimeMs, 0) / 60000))} />
       </View>
 
       {domains.map((domain) => {
@@ -318,6 +406,8 @@ function PagerControls({ index, total, onPrevious, onNext }: { index: number; to
 function SettingsScreen() {
   const resetProgress = useAppStore((state) => state.resetProgress);
   const feedSettings = useAppStore((state) => state.feedSettings);
+  const setFeedMode = useAppStore((state) => state.setFeedMode);
+  const setSessionGoal = useAppStore((state) => state.setSessionGoal);
   const toggleFeedDomain = useAppStore((state) => state.toggleFeedDomain);
   const toggleFeedPuzzleType = useAppStore((state) => state.toggleFeedPuzzleType);
   const enableAllFeedPuzzles = useAppStore((state) => state.enableAllFeedPuzzles);
@@ -328,6 +418,30 @@ function SettingsScreen() {
     <ScrollView contentContainerStyle={styles.scrollContent}>
       <Text style={styles.kicker}>Settings</Text>
       <Text style={styles.screenTitle}>Customize training</Text>
+      <Text style={styles.sectionTitle}>Feed mode</Text>
+      <View style={styles.modeGrid}>
+        {feedModes.map((mode) => {
+          const active = feedSettings.mode === mode.id;
+          return (
+            <Pressable key={mode.id} style={[styles.modeTile, active && styles.modeTileActive]} onPress={() => setFeedMode(mode.id)}>
+              <Text style={[styles.modeLabel, active && styles.modeLabelActive]}>{mode.label}</Text>
+              <Text style={styles.modeNote}>{mode.note}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+
+      <Text style={styles.sectionTitle}>Session length</Text>
+      <View style={styles.segmentRow}>
+        {sessionGoals.map((goal) => {
+          const active = feedSettings.sessionGoal === goal.id;
+          return (
+            <Pressable key={goal.id} style={[styles.segmentButton, active && styles.segmentButtonActive]} onPress={() => setSessionGoal(goal.id)}>
+              <Text style={[styles.segmentText, active && styles.segmentTextActive]}>{goal.label}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
       <View style={styles.quickActions}>
         <Pressable style={styles.primaryButtonSmall} onPress={enableHardFeedPuzzles}>
           <Text style={styles.primaryButtonText}>Hard logic mix</Text>
@@ -436,6 +550,26 @@ function TabBar({ active, setActive }: { active: Tab; setActive: (tab: Tab) => v
 
 function AppShell() {
   const [active, setActive] = useState<Tab>('feed');
+  const lastBrainCheckPromptDate = useAppStore((state) => state.lastBrainCheckPromptDate);
+  const assessments = useAppStore((state) => state.assessments);
+  const markBrainCheckPromptSeen = useAppStore((state) => state.markBrainCheckPromptSeen);
+  const [showBrainCheckPrompt, setShowBrainCheckPrompt] = useState(false);
+
+  useEffect(() => {
+    const today = todayKey();
+    const checkedToday = assessments.some((assessment) => new Date(assessment.date).toISOString().slice(0, 10) === today);
+    if (lastBrainCheckPromptDate !== today && !checkedToday) {
+      const timer = setTimeout(() => setShowBrainCheckPrompt(true), 500);
+      return () => clearTimeout(timer);
+    }
+    setShowBrainCheckPrompt(false);
+    return undefined;
+  }, [assessments, lastBrainCheckPromptDate]);
+
+  const closeBrainCheckPrompt = () => {
+    markBrainCheckPromptSeen();
+    setShowBrainCheckPrompt(false);
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -447,6 +581,29 @@ function AppShell() {
         {active === 'settings' ? <SettingsScreen /> : null}
       </View>
       <TabBar active={active} setActive={setActive} />
+      <Modal transparent visible={showBrainCheckPrompt} animationType="fade" onRequestClose={closeBrainCheckPrompt}>
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalPanel}>
+            <Text style={styles.kicker}>Daily Brain Check</Text>
+            <Text style={styles.modalTitle}>Do a quick baseline?</Text>
+            <Text style={styles.infoBody}>A short check gives cleaner trend data than regular practice. You can skip it and train normally.</Text>
+            <View style={styles.modalActions}>
+              <Pressable style={styles.secondaryButtonSmall} onPress={closeBrainCheckPrompt}>
+                <Text style={styles.secondaryButtonText}>Later</Text>
+              </Pressable>
+              <Pressable
+                style={styles.primaryButtonSmall}
+                onPress={() => {
+                  closeBrainCheckPrompt();
+                  setActive('assess');
+                }}
+              >
+                <Text style={styles.primaryButtonText}>Start check</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -704,6 +861,72 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 18
   },
+  completionPanel: {
+    flex: 1,
+    padding: 20,
+    justifyContent: 'center'
+  },
+  modeGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10
+  },
+  modeTile: {
+    width: '48%',
+    minHeight: 78,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E1DDD1',
+    padding: 10,
+    justifyContent: 'center'
+  },
+  modeTileActive: {
+    borderColor: '#20242A',
+    backgroundColor: '#F4F6F1'
+  },
+  modeLabel: {
+    color: '#20242A',
+    fontWeight: '900',
+    fontSize: 14
+  },
+  modeLabelActive: {
+    color: '#20242A'
+  },
+  modeNote: {
+    color: '#68717C',
+    fontWeight: '700',
+    fontSize: 11,
+    lineHeight: 15,
+    marginTop: 3
+  },
+  segmentRow: {
+    flexDirection: 'row',
+    gap: 6
+  },
+  segmentButton: {
+    flex: 1,
+    minHeight: 40,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#D6DADF',
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 6
+  },
+  segmentButtonActive: {
+    backgroundColor: '#20242A',
+    borderColor: '#20242A'
+  },
+  segmentText: {
+    color: '#20242A',
+    fontWeight: '900',
+    fontSize: 12
+  },
+  segmentTextActive: {
+    color: '#FFFFFF'
+  },
   quickActions: {
     flexDirection: 'row',
     gap: 10,
@@ -845,5 +1068,30 @@ const styles = StyleSheet.create({
   },
   tabTextActive: {
     color: '#20242A'
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(32,36,42,0.45)',
+    padding: 20,
+    justifyContent: 'center'
+  },
+  modalPanel: {
+    backgroundColor: '#FFFDF8',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E1DDD1',
+    padding: 18
+  },
+  modalTitle: {
+    color: '#20242A',
+    fontSize: 24,
+    lineHeight: 29,
+    fontWeight: '900',
+    marginTop: 4
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 16
   }
 });

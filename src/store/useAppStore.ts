@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSyncExternalStore } from 'react';
 import { domainIds } from '../data/domains';
 import { allTrainingPuzzleTypeIds, trainingGeneratorEntries } from '../logic/puzzleGenerators';
-import type { Assessment, CognitiveDomain, DomainScore, FeedSettings, PuzzleAttempt } from '../types';
+import type { Assessment, CognitiveDomain, DomainScore, FeedMode, FeedSettings, PuzzleAttempt, SessionGoal } from '../types';
 import { adjustDifficulty, createInitialScores, scoreAssessment, trendFromScores } from '../logic/scoring';
 
 interface AppStore {
@@ -13,16 +13,32 @@ interface AppStore {
   streakDays: number;
   totalTrainingMinutes: number;
   lastPracticeDate?: string;
+  lastBrainCheckPromptDate?: string;
   recordAttempt: (attempt: PuzzleAttempt) => void;
   recordAssessment: (assessment: Assessment) => void;
+  setFeedMode: (mode: FeedMode) => void;
+  setSessionGoal: (goal: SessionGoal) => void;
   toggleFeedDomain: (domain: CognitiveDomain) => void;
   toggleFeedPuzzleType: (typeId: string) => void;
   enableAllFeedPuzzles: () => void;
   enableHardFeedPuzzles: () => void;
+  markBrainCheckPromptSeen: () => void;
   resetProgress: () => void;
 }
 
-type PersistedState = Omit<AppStore, 'recordAttempt' | 'recordAssessment' | 'toggleFeedDomain' | 'toggleFeedPuzzleType' | 'enableAllFeedPuzzles' | 'enableHardFeedPuzzles' | 'resetProgress'>;
+type PersistedState = Omit<
+  AppStore,
+  | 'recordAttempt'
+  | 'recordAssessment'
+  | 'setFeedMode'
+  | 'setSessionGoal'
+  | 'toggleFeedDomain'
+  | 'toggleFeedPuzzleType'
+  | 'enableAllFeedPuzzles'
+  | 'enableHardFeedPuzzles'
+  | 'markBrainCheckPromptSeen'
+  | 'resetProgress'
+>;
 
 const storageKey = 'puzzle-scroll-progress';
 const listeners = new Set<() => void>();
@@ -30,17 +46,73 @@ const listeners = new Set<() => void>();
 const todayKey = () => new Date().toISOString().slice(0, 10);
 const defaultFeedSettings = (): FeedSettings => ({
   enabledDomains: [...domainIds],
-  enabledPuzzleTypes: [...allTrainingPuzzleTypeIds]
+  enabledPuzzleTypes: [...allTrainingPuzzleTypeIds],
+  mode: 'mixed',
+  sessionGoal: 'standard'
 });
+
+function hardTypesFor(domains: CognitiveDomain[]) {
+  return domains.flatMap((domain) => trainingGeneratorEntries[domain].filter((entry) => entry.complexity === 'Hard').map((entry) => entry.typeId));
+}
+
+function modePreset(mode: FeedMode, sessionGoal: SessionGoal): FeedSettings {
+  if (mode === 'fastReflex') {
+    return {
+      enabledDomains: ['processingSpeed', 'attention', 'flexibility'],
+      enabledPuzzleTypes: ['speed-match', 'peripheral-catch', 'pattern-flash', 'color-rush', 'symbol-scan', 'focus-fire', 'stop-signal', 'odd-pulse', 'rule-flip', 'switch-math'],
+      mode,
+      sessionGoal
+    };
+  }
+  if (mode === 'deepReasoning') {
+    const enabledDomains: CognitiveDomain[] = ['reasoning', 'planning', 'quantitative', 'language'];
+    return { enabledDomains, enabledPuzzleTypes: hardTypesFor(enabledDomains), mode, sessionGoal };
+  }
+  if (mode === 'mathSprint') {
+    return {
+      enabledDomains: ['quantitative', 'reasoning', 'flexibility'],
+      enabledPuzzleTypes: ['equation-system', 'ratio-puzzle', 'quant-balance', 'data-sufficiency', 'work-rate', 'mixture-puzzle', 'speed-distance', 'probability-draw', 'remainder-system', 'profit-discount', 'overlapping-sets', 'switch-math', 'balance-code'],
+      mode,
+      sessionGoal
+    };
+  }
+  if (mode === 'memory') {
+    return {
+      enabledDomains: ['workingMemory', 'attention'],
+      enabledPuzzleTypes: ['sequence-recall', 'number-chain', 'dual-track', 'memory-grid', 'operation-span', 'delayed-recall', 'color-word', 'conflict-grid'],
+      mode,
+      sessionGoal
+    };
+  }
+  if (mode === 'calmFocus') {
+    return {
+      enabledDomains: ['attention', 'workingMemory', 'language'],
+      enabledPuzzleTypes: ['color-word', 'focus-fire', 'conflict-grid', 'noise-filter', 'memory-grid', 'word-chain', 'quick-clue', 'constraint-clue'],
+      mode,
+      sessionGoal
+    };
+  }
+  if (mode === 'hardLogic') {
+    const enabledDomains: CognitiveDomain[] = ['reasoning', 'planning', 'quantitative', 'language'];
+    return { enabledDomains, enabledPuzzleTypes: hardTypesFor(enabledDomains), mode, sessionGoal };
+  }
+  return { ...defaultFeedSettings(), mode, sessionGoal };
+}
 
 function normalizeFeedSettings(settings?: Partial<FeedSettings>): FeedSettings {
   const validDomains = new Set(domainIds);
   const validTypes = new Set(allTrainingPuzzleTypeIds);
+  const mode = settings?.mode ?? 'mixed';
+  const sessionGoal = settings?.sessionGoal ?? 'standard';
   const enabledDomains = (settings?.enabledDomains ?? domainIds).filter((domain) => validDomains.has(domain));
-  const enabledPuzzleTypes = (settings?.enabledPuzzleTypes ?? allTrainingPuzzleTypeIds).filter((typeId) => validTypes.has(typeId));
+  const rawTypes = settings?.enabledPuzzleTypes;
+  const shouldRefreshFullTypeList = !rawTypes || rawTypes.length >= 50;
+  const enabledPuzzleTypes = (shouldRefreshFullTypeList ? allTrainingPuzzleTypeIds : rawTypes).filter((typeId) => validTypes.has(typeId));
   return {
     enabledDomains: enabledDomains.length ? enabledDomains : [...domainIds],
-    enabledPuzzleTypes: enabledPuzzleTypes.length ? enabledPuzzleTypes : [...allTrainingPuzzleTypeIds]
+    enabledPuzzleTypes: enabledPuzzleTypes.length ? enabledPuzzleTypes : [...allTrainingPuzzleTypeIds],
+    mode,
+    sessionGoal
   };
 }
 
@@ -62,7 +134,8 @@ function persistable(current: AppStore): PersistedState {
     feedSettings: normalizeFeedSettings(current.feedSettings),
     streakDays: current.streakDays,
     totalTrainingMinutes: current.totalTrainingMinutes,
-    lastPracticeDate: current.lastPracticeDate
+    lastPracticeDate: current.lastPracticeDate,
+    lastBrainCheckPromptDate: current.lastBrainCheckPromptDate
   };
 }
 
@@ -129,12 +202,19 @@ const actions = {
     }
     setStore({ domains: nextDomains, assessments: [assessment, ...store.assessments].slice(0, 50) });
   },
+  setFeedMode: (mode: FeedMode) => {
+    setStore({ feedSettings: modePreset(mode, store.feedSettings.sessionGoal) });
+  },
+  setSessionGoal: (goal: SessionGoal) => {
+    setStore({ feedSettings: { ...store.feedSettings, sessionGoal: goal } });
+  },
   toggleFeedDomain: (domain: CognitiveDomain) => {
     const current = store.feedSettings.enabledDomains;
     const enabledDomains = current.includes(domain) ? current.filter((item) => item !== domain) : [...current, domain];
     setStore({
       feedSettings: {
         ...store.feedSettings,
+        mode: 'mixed',
         enabledDomains: enabledDomains.length ? enabledDomains : [domain]
       }
     });
@@ -145,17 +225,19 @@ const actions = {
     setStore({
       feedSettings: {
         ...store.feedSettings,
+        mode: 'mixed',
         enabledPuzzleTypes: enabledPuzzleTypes.length ? enabledPuzzleTypes : [typeId]
       }
     });
   },
   enableAllFeedPuzzles: () => {
-    setStore({ feedSettings: defaultFeedSettings() });
+    setStore({ feedSettings: { ...defaultFeedSettings(), sessionGoal: store.feedSettings.sessionGoal } });
   },
   enableHardFeedPuzzles: () => {
-    const hardDomains: CognitiveDomain[] = ['reasoning', 'planning', 'quantitative', 'language'];
-    const hardTypes = hardDomains.flatMap((domain) => trainingGeneratorEntries[domain].filter((entry) => entry.complexity === 'Hard').map((entry) => entry.typeId));
-    setStore({ feedSettings: { enabledDomains: hardDomains, enabledPuzzleTypes: hardTypes } });
+    setStore({ feedSettings: modePreset('hardLogic', store.feedSettings.sessionGoal) });
+  },
+  markBrainCheckPromptSeen: () => {
+    setStore({ lastBrainCheckPromptDate: todayKey() });
   },
   resetProgress: () => {
     setStore({
@@ -165,7 +247,8 @@ const actions = {
       feedSettings: defaultFeedSettings(),
       streakDays: 0,
       totalTrainingMinutes: 0,
-      lastPracticeDate: undefined
+      lastPracticeDate: undefined,
+      lastBrainCheckPromptDate: undefined
     });
   }
 };

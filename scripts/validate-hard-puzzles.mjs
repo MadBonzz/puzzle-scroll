@@ -212,6 +212,27 @@ function validateNewPlanning() {
   const buildPath = design + 3 + 1;
   const testPath = design + 5 + 1;
   assert(testPath > buildPath, `Bottleneck Plan: expected Test path ${testPath} to exceed Build path ${buildPath}`);
+
+  const candidates = [
+    'Nia in Lab 2 on Tuesday',
+    'Omar in Lab 2 on Tuesday',
+    'Pia in Lab 2 on Wednesday',
+    'Ravi in Lab 4 on Tuesday'
+  ];
+  const validLongCase = candidates.filter((choice) => {
+    const [person, , lab, labNo, , day] = choice.split(' ');
+    const labName = `${lab} ${labNo}`;
+    const days = { Monday: 1, Tuesday: 2, Wednesday: 3, Thursday: 4 };
+    const omarDay = 1;
+    return (
+      !(person === 'Nia' && ['Lab 1', 'Lab 4'].includes(labName)) &&
+      !(person === 'Pia' && (day !== 'Wednesday' || labName === 'Lab 2')) &&
+      !(person === 'Ravi' && day !== 'Thursday') &&
+      !(person === 'Omar' && labName !== 'Lab 1') &&
+      (labName !== 'Lab 2' || days[day] === omarDay + 1)
+    );
+  });
+  assert(validLongCase.length === 1 && validLongCase[0] === 'Nia in Lab 2 on Tuesday', `Long Case: unexpected valid choices ${validLongCase.join(' | ')}`);
 }
 
 function validateNewQuant() {

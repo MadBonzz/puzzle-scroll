@@ -14,7 +14,7 @@ interface Props {
 
 export function PuzzleCard({ puzzle, height, onAnswered }: Props) {
   const domain = domainById[puzzle.domain];
-  const [phase, setPhase] = useState<'ready' | 'study' | 'answer'>(puzzle.requiresReady ? 'ready' : 'answer');
+  const [phase, setPhase] = useState<'ready' | 'study' | 'interference' | 'answer'>(puzzle.requiresReady ? 'ready' : 'answer');
   const [selected, setSelected] = useState<number | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const startedAt = useRef(Date.now());
@@ -30,11 +30,24 @@ export function PuzzleCard({ puzzle, height, onAnswered }: Props) {
   useEffect(() => {
     if (phase !== 'study') return undefined;
     const timer = setTimeout(() => {
-      startedAt.current = Date.now();
-      setPhase('answer');
+      if (puzzle.interferencePrompt || puzzle.interferenceVisual) {
+        setPhase('interference');
+      } else {
+        startedAt.current = Date.now();
+        setPhase('answer');
+      }
     }, puzzle.studyDurationMs ?? 1800);
     return () => clearTimeout(timer);
-  }, [phase, puzzle.studyDurationMs]);
+  }, [phase, puzzle.interferencePrompt, puzzle.interferenceVisual, puzzle.studyDurationMs]);
+
+  useEffect(() => {
+    if (phase !== 'interference') return undefined;
+    const timer = setTimeout(() => {
+      startedAt.current = Date.now();
+      setPhase('answer');
+    }, puzzle.interferenceDurationMs ?? 1800);
+    return () => clearTimeout(timer);
+  }, [phase, puzzle.interferenceDurationMs]);
 
   const beginStudy = () => {
     startedAt.current = Date.now();
@@ -86,9 +99,12 @@ export function PuzzleCard({ puzzle, height, onAnswered }: Props) {
             </View>
           ) : (
             <>
-              <Text numberOfLines={5} adjustsFontSizeToFit style={styles.prompt}>{phase === 'study' ? puzzle.studyPrompt ?? puzzle.prompt : puzzle.prompt}</Text>
-              <PuzzleVisual visual={phase === 'study' ? puzzle.studyVisual ?? puzzle.visual : puzzle.visual} />
+              <Text numberOfLines={5} adjustsFontSizeToFit style={styles.prompt}>
+                {phase === 'study' ? puzzle.studyPrompt ?? puzzle.prompt : phase === 'interference' ? puzzle.interferencePrompt ?? 'Hold the earlier item in mind.' : puzzle.prompt}
+              </Text>
+              <PuzzleVisual visual={phase === 'study' ? puzzle.studyVisual ?? puzzle.visual : phase === 'interference' ? puzzle.interferenceVisual : puzzle.visual} />
               {phase === 'study' ? <Text style={styles.studyHint}>Study now. The question appears next.</Text> : null}
+              {phase === 'interference' ? <Text style={styles.studyHint}>Keep the original item in memory.</Text> : null}
               {submitted ? (
                 <View style={[styles.feedbackPanel, { borderColor: isCorrect ? '#277A5B' : '#C84E2F' }]}>
                   <Text style={[styles.feedbackTitle, { color: isCorrect ? '#277A5B' : '#C84E2F' }]}>{isCorrect ? 'Correct' : 'Incorrect'}</Text>
@@ -147,6 +163,8 @@ export function PuzzleCard({ puzzle, height, onAnswered }: Props) {
                 ? 'Press ready before the timed display begins.'
                 : phase === 'study'
                   ? 'Memorize what you see.'
+                  : phase === 'interference'
+                    ? 'Do the distraction while holding the earlier item.'
                   : 'Answer, then press Next for another puzzle.'}
           </Text>
         </View>

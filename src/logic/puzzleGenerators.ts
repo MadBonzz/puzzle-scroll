@@ -378,6 +378,36 @@ function operationSpan(difficulty: number): PuzzleRound {
   };
 }
 
+function delayedRecall(difficulty: number): PuzzleRound {
+  const code = sample('RKTMSLPQ'.split(''), 4 + Math.min(2, Math.floor(difficulty / 8)));
+  const answer = code.join('');
+  const distractors = [code.slice().reverse().join(''), shuffle(code).join(''), code.slice(1).concat(code[0]!).join('')];
+  const { choices, correctIndex } = withAnswer(distractors, answer);
+  const a = 12 + Math.floor(Math.random() * 9);
+  const b = 4 + Math.floor(Math.random() * 8);
+  return {
+    id: id('delayed-recall'),
+    domain: 'workingMemory',
+    typeId: 'delayed-recall',
+    typeName: 'Delayed Recall',
+    subtitle: 'Hold information through interference',
+    difficulty,
+    isAssessment: false,
+    prompt: 'Now recall the original code in order.',
+    visual: { mode: 'tiles', tokens: hiddenSequence(code.length), columns: code.length },
+    requiresReady: true,
+    studyPrompt: 'Memorize this code. A distraction task appears before the answer choices.',
+    studyVisual: { mode: 'tiles', tokens: code.map((letter, index) => token(`${index + 1}: ${letter}`, '#2E6F95')), columns: code.length },
+    studyDurationMs: studyMs(difficulty, 2300),
+    interferencePrompt: 'Interference: solve this, then keep holding the code.',
+    interferenceVisual: { mode: 'statement', note: `${a} + ${b} = ${a + b}` },
+    interferenceDurationMs: Math.max(1400, 2600 - difficulty * 45),
+    choices,
+    correctIndex,
+    explanation: `The original code was ${answer}. The arithmetic screen was only a distraction.`
+  };
+}
+
 function colorWord(difficulty: number, isAssessment = false): PuzzleRound {
   const word = pick(colors);
   let ink = pick(colors);
@@ -396,6 +426,38 @@ function colorWord(difficulty: number, isAssessment = false): PuzzleRound {
     choices,
     correctIndex,
     explanation: `The word meaning is ignored; the ink is ${ink.name}.`
+  };
+}
+
+function noiseFilter(difficulty: number): PuzzleRound {
+  const targetShape = pick(['circle', 'square', 'triangle']);
+  const targetColor = pick(colors);
+  const count = 12 + Math.floor(difficulty / 3);
+  const tokens = Array.from({ length: count }, () => token(pick(shapes), pick(colors).value));
+  const targetCount = 2 + Math.floor(Math.random() * 3);
+  for (let index = 0; index < targetCount; index += 1) {
+    tokens[index] = token(targetShape, targetColor.value);
+  }
+  const shuffled = shuffle(tokens);
+  const answer = String(shuffled.filter((item) => item.label === targetShape && item.color === targetColor.value).length);
+  const { choices, correctIndex } = withAnswer([String(Number(answer) - 1), String(Number(answer) + 1), String(Number(answer) + 2)], answer);
+  return {
+    id: id('noise-filter'),
+    domain: 'attention',
+    typeId: 'noise-filter',
+    typeName: 'Noise Filter',
+    subtitle: 'Distraction resistance',
+    difficulty,
+    isAssessment: false,
+    prompt: `How many items match BOTH: ${targetColor.name} and ${targetShape}?`,
+    visual: { mode: 'grid', tokens: hiddenTokens(shuffled.length), columns: 4 },
+    requiresReady: true,
+    studyPrompt: `Ignore every partial match. Count only ${targetColor.name} ${targetShape}s.`,
+    studyVisual: { mode: 'grid', tokens: shuffled, columns: 4, note: 'Distractors share either color or shape.' },
+    studyDurationMs: studyMs(difficulty, 2600),
+    choices,
+    correctIndex,
+    explanation: `The answer counts only items matching both features, not just ${targetColor.name} items or just ${targetShape}s.`
   };
 }
 
@@ -1685,6 +1747,42 @@ function bottleneckPlan(difficulty: number): PuzzleRound {
   };
 }
 
+function longCaseDeduction(difficulty: number): PuzzleRound {
+  const answer = 'Nia in Lab 2 on Tuesday';
+  const { choices, correctIndex } = withAnswer(['Omar in Lab 2 on Tuesday', 'Pia in Lab 2 on Wednesday', 'Ravi in Lab 4 on Tuesday'], answer);
+  return {
+    id: id('long-case-deduction'),
+    domain: 'planning',
+    typeId: 'long-case-deduction',
+    typeName: 'Long Case',
+    subtitle: 'Long-form multi-step deduction',
+    difficulty,
+    isAssessment: false,
+    prompt: 'Which assignment is forced?',
+    visual: {
+      mode: 'rules',
+      note: 'Research slots',
+      lines: [
+        'Four people: Nia, Omar, Pia, Ravi.',
+        'Labs: Lab 1, Lab 2, Lab 3, Lab 4. Days: Monday, Tuesday, Wednesday, Thursday.',
+        'Nia is not in Lab 1 or Lab 4.',
+        'The Lab 2 person works exactly one day after Omar.',
+        'Pia works on Wednesday and is not in Lab 2.',
+        'Ravi works on Thursday.',
+        'Omar is in Lab 1.'
+      ]
+    },
+    choices,
+    correctIndex,
+    explanation: 'Omar is Monday in Lab 1. The Lab 2 person works one day after Omar, so Lab 2 is Tuesday. Nia cannot be Lab 1 or Lab 4, and Pia is Wednesday, Ravi is Thursday, so Nia is Lab 2 on Tuesday.',
+    source: {
+      title: publicDomainSources.dudeneyCanterbury.title,
+      url: publicDomainSources.dudeneyCanterbury.url,
+      note: 'Adapted from public-domain arrangement puzzle formats.'
+    }
+  };
+}
+
 function speedDistance(difficulty: number): PuzzleRound {
   const answer = '2.5 hours';
   const { choices, correctIndex } = withAnswer(['2 hours', '3 hours', '4 hours'], answer);
@@ -1818,14 +1916,16 @@ export const trainingGeneratorEntries: Record<CognitiveDomain, GeneratorEntry[]>
     { typeId: 'number-chain', typeName: 'Number Chain', generator: numberChain, complexity: 'Core' },
     { typeId: 'dual-track', typeName: 'Dual Track', generator: dualTrack, complexity: 'Hard' },
     { typeId: 'memory-grid', typeName: 'Memory Grid', generator: memoryGrid, complexity: 'Core' },
-    { typeId: 'operation-span', typeName: 'Operation Span', generator: operationSpan, complexity: 'Hard' }
+    { typeId: 'operation-span', typeName: 'Operation Span', generator: operationSpan, complexity: 'Hard' },
+    { typeId: 'delayed-recall', typeName: 'Delayed Recall', generator: delayedRecall, complexity: 'Hard' }
   ],
   attention: [
     { typeId: 'color-word', typeName: 'Color Word', generator: colorWord, complexity: 'Core' },
     { typeId: 'focus-fire', typeName: 'Focus Fire', generator: focusFire, complexity: 'Core' },
     { typeId: 'stop-signal', typeName: 'Stop Signal', generator: stopSignal, complexity: 'Core' },
     { typeId: 'odd-pulse', typeName: 'Odd Pulse', generator: oddPulse, complexity: 'Core' },
-    { typeId: 'conflict-grid', typeName: 'Conflict Grid', generator: conflictGrid, complexity: 'Hard' }
+    { typeId: 'conflict-grid', typeName: 'Conflict Grid', generator: conflictGrid, complexity: 'Hard' },
+    { typeId: 'noise-filter', typeName: 'Noise Filter', generator: noiseFilter, complexity: 'Hard' }
   ],
   flexibility: [
     { typeId: 'rule-flip', typeName: 'Rule Flip', generator: ruleFlip, complexity: 'Core' },
@@ -1871,7 +1971,8 @@ export const trainingGeneratorEntries: Record<CognitiveDomain, GeneratorEntry[]>
     { typeId: 'dependency-plan', typeName: 'Dependency Plan', generator: dependencyPlan, complexity: 'Hard' },
     { typeId: 'value-packing', typeName: 'Value Packing', generator: valuePacking, complexity: 'Hard' },
     { typeId: 'valid-schedule', typeName: 'Valid Schedule', generator: validSchedule, complexity: 'Hard' },
-    { typeId: 'bottleneck-plan', typeName: 'Bottleneck Plan', generator: bottleneckPlan, complexity: 'Hard' }
+    { typeId: 'bottleneck-plan', typeName: 'Bottleneck Plan', generator: bottleneckPlan, complexity: 'Hard' },
+    { typeId: 'long-case-deduction', typeName: 'Long Case', generator: longCaseDeduction, complexity: 'Hard' }
   ],
   quantitative: [
     { typeId: 'equation-system', typeName: 'Equation System', generator: equationSystem, complexity: 'Core' },
@@ -1919,7 +2020,7 @@ export function generateAssessmentBattery(difficultyByDomain: Record<CognitiveDo
 export function generateDailySession(
   difficultyByDomain: Record<CognitiveDomain, number>,
   count = 12,
-  options?: { enabledDomains?: CognitiveDomain[]; enabledPuzzleTypes?: string[] }
+  options?: { enabledDomains?: CognitiveDomain[]; enabledPuzzleTypes?: string[]; domainSequence?: CognitiveDomain[] }
 ) {
   const enabledDomainSet = new Set(options?.enabledDomains?.length ? options.enabledDomains : domainIds);
   const enabledTypeSet = new Set(options?.enabledPuzzleTypes?.length ? options.enabledPuzzleTypes : allTrainingPuzzleTypeIds);
@@ -1927,7 +2028,8 @@ export function generateDailySession(
     if (!enabledDomainSet.has(domain)) return false;
     return trainingGeneratorEntries[domain].some((entry) => enabledTypeSet.has(entry.typeId));
   });
-  const domainsForSession = allowedDomains.length ? allowedDomains : options?.enabledDomains?.length ? options.enabledDomains : domainIds;
+  const sequence = options?.domainSequence?.filter((domain) => allowedDomains.includes(domain));
+  const domainsForSession = sequence?.length ? sequence : allowedDomains.length ? allowedDomains : options?.enabledDomains?.length ? options.enabledDomains : domainIds;
   const puzzles: PuzzleRound[] = [];
   for (let index = 0; index < count; index += 1) {
     const domain = domainsForSession[index % domainsForSession.length]!;
