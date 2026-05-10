@@ -1,7 +1,7 @@
 import { Feather } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Modal, PanResponder, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { BackHandler, Modal, PanResponder, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { domains, domainIds } from './src/data/domains';
 import { publicDomainSources } from './src/data/sourcePuzzles';
@@ -12,7 +12,7 @@ import type { AssessmentScore, CognitiveDomain, FeedMode, PuzzleAttempt, Session
 import { PuzzleCard } from './src/components/PuzzleCard';
 import { RadarChart } from './src/components/RadarChart';
 
-type Tab = 'feed' | 'profile' | 'assess' | 'settings';
+type Tab = 'dashboard' | 'feed' | 'profile' | 'assess' | 'settings';
 
 const feedModes: { id: FeedMode; label: string; note: string }[] = [
   { id: 'mixed', label: 'Mixed Daily', note: 'Balanced with weak-area bias' },
@@ -76,7 +76,7 @@ function usePwaInstallSupport() {
   }, []);
 }
 
-function FeedScreen() {
+function FeedScreen({ immersive, onToggleImmersive }: { immersive: boolean; onToggleImmersive: () => void }) {
   const { height } = useWindowDimensions();
   const domainsState = useAppStore((state) => state.domains);
   const feedSettings = useAppStore((state) => state.feedSettings);
@@ -95,7 +95,7 @@ function FeedScreen() {
     );
   };
   const [session, setSession] = useState(buildSession);
-  const cardHeight = Math.max(430, height - 148);
+  const cardHeight = Math.max(430, height - (immersive ? 18 : 148));
   const [index, setIndex] = useState(0);
   const [missCount, setMissCount] = useState(0);
   const [sessionEnded, setSessionEnded] = useState(false);
@@ -150,21 +150,72 @@ function FeedScreen() {
 
   return (
     <View style={styles.screen}>
-      <View style={styles.appHeader}>
-        <View>
-          <Text style={styles.kicker}>Daily Mix</Text>
-          <Text style={styles.appTitle}>PuzzleScroll</Text>
+      {!immersive ? (
+        <View style={styles.appHeader}>
+          <View>
+            <Text style={styles.kicker}>Daily Mix</Text>
+            <Text style={styles.appTitle}>PuzzleScroll</Text>
+          </View>
+          <View style={styles.headerStat}>
+            <Text style={styles.headerStatValue}>{streakDays}</Text>
+            <Text style={styles.headerStatLabel}>day streak</Text>
+          </View>
         </View>
-        <View style={styles.headerStat}>
-          <Text style={styles.headerStatValue}>{streakDays}</Text>
-          <Text style={styles.headerStatLabel}>day streak</Text>
-        </View>
-      </View>
+      ) : null}
+      <Pressable style={styles.lockButton} onPress={onToggleImmersive}>
+        <Feather name={immersive ? 'lock' : 'unlock'} size={18} color="#20242A" />
+      </Pressable>
       <SwipePager index={index} total={session.length} onPrevious={goPrevious} onNext={goNext}>
         {current ? <PuzzleCard key={current.id} puzzle={current} height={cardHeight} onAnswered={onAnswered} /> : null}
       </SwipePager>
-      <PagerControls index={index} total={session.length} onPrevious={goPrevious} onNext={goNext} />
+      {!immersive ? <PagerControls index={index} total={session.length} onPrevious={goPrevious} onNext={goNext} /> : null}
     </View>
+  );
+}
+
+function DashboardScreen({ onStartFeed, onStartCheck }: { onStartFeed: () => void; onStartCheck: () => void }) {
+  const attempts = useAppStore((state) => state.attempts);
+  const streakDays = useAppStore((state) => state.streakDays);
+  const feedSettings = useAppStore((state) => state.feedSettings);
+  const recent = attempts.filter((attempt) => !attempt.isAssessment).slice(0, 20);
+  const accuracy = recent.length ? Math.round((recent.reduce((sum, attempt) => sum + attempt.accuracy, 0) / recent.length) * 100) : 0;
+  const hardSolved = attempts.filter((attempt) => hardTypeIds.has(attempt.puzzleType)).length;
+  const activeMode = feedModes.find((mode) => mode.id === feedSettings.mode)?.label ?? 'Mixed Daily';
+
+  return (
+    <ScrollView contentContainerStyle={styles.scrollContent}>
+      <Text style={styles.kicker}>Dashboard</Text>
+      <Text style={styles.screenTitle}>Train instead of scrolling</Text>
+      <View style={styles.dashboardHero}>
+        <View>
+          <Text style={styles.heroMode}>{activeMode}</Text>
+          <Text style={styles.heroSub}>{sessionGoals.find((goal) => goal.id === feedSettings.sessionGoal)?.label ?? '10 min'} session</Text>
+        </View>
+        <Pressable style={styles.heroButton} onPress={onStartFeed}>
+          <Feather name="play" size={18} color="#FFFFFF" />
+          <Text style={styles.primaryButtonText}>Start</Text>
+        </Pressable>
+      </View>
+      <View style={styles.statsRow}>
+        <Metric label="Streak" value={String(streakDays)} />
+        <Metric label="Accuracy" value={`${accuracy}%`} />
+        <Metric label="Hard" value={String(hardSolved)} />
+      </View>
+      <Pressable style={styles.dashboardAction} onPress={onStartCheck}>
+        <View>
+          <Text style={styles.domainName}>Daily Brain Check</Text>
+          <Text style={styles.domainDescription}>Optional short baseline for cleaner trends.</Text>
+        </View>
+        <Feather name="chevron-right" size={20} color="#20242A" />
+      </Pressable>
+      <Pressable style={styles.dashboardAction} onPress={onStartFeed}>
+        <View>
+          <Text style={styles.domainName}>Immersive Feed</Text>
+          <Text style={styles.domainDescription}>Header and navigation hide while you train.</Text>
+        </View>
+        <Feather name="chevron-right" size={20} color="#20242A" />
+      </Pressable>
+    </ScrollView>
   );
 }
 
@@ -351,11 +402,14 @@ function SwipePager({
     else onNext();
   };
 
-  const panResponder = PanResponder.create({
-    onMoveShouldSetPanResponder: (_, gesture) => {
+  const shouldHandleVerticalPage = (_: unknown, gesture: { dx: number; dy: number }) => {
       const vertical = Math.abs(gesture.dy);
       return vertical > 42 && vertical > Math.abs(gesture.dx) * 1.2;
-    },
+  };
+
+  const panResponder = PanResponder.create({
+    onMoveShouldSetPanResponder: shouldHandleVerticalPage,
+    onMoveShouldSetPanResponderCapture: shouldHandleVerticalPage,
     onPanResponderRelease: (_, gesture) => {
       if (gesture.dy < -58) step('next');
       if (gesture.dy > 58) step('previous');
@@ -527,7 +581,8 @@ function InfoBlock({ title, body }: { title: string; body: string }) {
 
 function TabBar({ active, setActive }: { active: Tab; setActive: (tab: Tab) => void }) {
   const tabs: { id: Tab; label: string; icon: string }[] = [
-    { id: 'feed', label: 'Feed', icon: 'home' },
+    { id: 'dashboard', label: 'Home', icon: 'grid' },
+    { id: 'feed', label: 'Feed', icon: 'play-circle' },
     { id: 'profile', label: 'Profile', icon: 'bar-chart-2' },
     { id: 'assess', label: 'Check', icon: 'check-circle' },
     { id: 'settings', label: 'Settings', icon: 'settings' }
@@ -549,7 +604,8 @@ function TabBar({ active, setActive }: { active: Tab; setActive: (tab: Tab) => v
 }
 
 function AppShell() {
-  const [active, setActive] = useState<Tab>('feed');
+  const [active, setActiveRaw] = useState<Tab>('dashboard');
+  const [feedImmersive, setFeedImmersive] = useState(true);
   const lastBrainCheckPromptDate = useAppStore((state) => state.lastBrainCheckPromptDate);
   const assessments = useAppStore((state) => state.assessments);
   const markBrainCheckPromptSeen = useAppStore((state) => state.markBrainCheckPromptSeen);
@@ -570,17 +626,40 @@ function AppShell() {
     markBrainCheckPromptSeen();
     setShowBrainCheckPrompt(false);
   };
+  const setActive = (tab: Tab) => {
+    if (tab === 'feed') setFeedImmersive(true);
+    setActiveRaw(tab);
+  };
+
+  useEffect(() => {
+    if (active !== 'feed' || !feedImmersive) return undefined;
+    const unlock = () => {
+      setFeedImmersive(false);
+      return true;
+    };
+    const subscription = BackHandler.addEventListener('hardwareBackPress', unlock);
+    if (typeof window !== 'undefined') {
+      window.history.pushState({ puzzleScrollFeed: true }, '');
+      window.addEventListener('popstate', unlock);
+      return () => {
+        subscription.remove();
+        window.removeEventListener('popstate', unlock);
+      };
+    }
+    return () => subscription.remove();
+  }, [active, feedImmersive]);
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar style="dark" />
       <View style={styles.appBody}>
-        {active === 'feed' ? <FeedScreen /> : null}
+        {active === 'dashboard' ? <DashboardScreen onStartFeed={() => setActive('feed')} onStartCheck={() => setActive('assess')} /> : null}
+        {active === 'feed' ? <FeedScreen immersive={feedImmersive} onToggleImmersive={() => setFeedImmersive((value) => !value)} /> : null}
         {active === 'profile' ? <ProfileScreen /> : null}
         {active === 'assess' ? <AssessScreen /> : null}
         {active === 'settings' ? <SettingsScreen /> : null}
       </View>
-      <TabBar active={active} setActive={setActive} />
+      {active === 'feed' && feedImmersive ? null : <TabBar active={active} setActive={setActive} />}
       <Modal transparent visible={showBrainCheckPrompt} animationType="fade" onRequestClose={closeBrainCheckPrompt}>
         <View style={styles.modalBackdrop}>
           <View style={styles.modalPanel}>
@@ -632,6 +711,20 @@ const styles = StyleSheet.create({
   cardStage: {
     flex: 1,
     overflow: 'hidden'
+  },
+  lockButton: {
+    position: 'absolute',
+    right: 12,
+    top: 10,
+    zIndex: 20,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.92)',
+    borderWidth: 1,
+    borderColor: '#E1DDD1',
+    alignItems: 'center',
+    justifyContent: 'center'
   },
   swipeSurface: {
     flex: 1
@@ -772,6 +865,51 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 10,
     marginBottom: 16
+  },
+  dashboardHero: {
+    minHeight: 132,
+    marginTop: 18,
+    marginBottom: 14,
+    borderRadius: 8,
+    backgroundColor: '#20242A',
+    padding: 18,
+    justifyContent: 'space-between'
+  },
+  heroMode: {
+    color: '#FFFFFF',
+    fontSize: 24,
+    lineHeight: 30,
+    fontWeight: '900'
+  },
+  heroSub: {
+    color: '#DDE4DF',
+    fontSize: 15,
+    lineHeight: 21,
+    fontWeight: '800',
+    marginTop: 4
+  },
+  heroButton: {
+    alignSelf: 'flex-start',
+    minHeight: 42,
+    borderRadius: 8,
+    backgroundColor: '#426A3F',
+    paddingHorizontal: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8
+  },
+  dashboardAction: {
+    minHeight: 72,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E1DDD1',
+    padding: 14,
+    marginBottom: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12
   },
   metric: {
     flex: 1,

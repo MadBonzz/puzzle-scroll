@@ -114,46 +114,45 @@ export function PuzzleCard({ puzzle, height, onAnswered }: Props) {
                   <Text style={styles.feedbackText}>{puzzle.explanation}</Text>
                 </View>
               ) : null}
+              <View style={[styles.choices, phase !== 'answer' && styles.choicesDisabled]}>
+                {phase === 'answer' ? puzzle.choices.map((choice, index) => {
+                  const active = selected === index;
+                  const correctChoice = submitted && index === puzzle.correctIndex;
+                  const wrongChoice = submitted && active && !correctChoice;
+                  return (
+                    <Pressable
+                      key={`${choice}-${index}`}
+                      onPress={() => submit(index)}
+                      style={[
+                        styles.choice,
+                        active && styles.choiceActive,
+                        correctChoice && styles.choiceCorrect,
+                        wrongChoice && styles.choiceWrong
+                      ]}
+                    >
+                      <View style={styles.choiceContent}>
+                        <Text style={[styles.choiceText, (active || correctChoice) && styles.choiceTextActive]}>
+                          {choice}
+                        </Text>
+                        {correctChoice ? <Feather name="check-circle" size={20} color="#FFFFFF" /> : null}
+                        {wrongChoice ? <Feather name="x-circle" size={20} color="#FFFFFF" /> : null}
+                      </View>
+                    </Pressable>
+                  );
+                }) : null}
+              </View>
+
+              {submitted ? (
+                <View style={[styles.resultBar, { backgroundColor: isCorrect ? '#277A5B' : '#C84E2F' }]}>
+                  <Feather name={isCorrect ? 'check-circle' : 'x-circle'} size={18} color="#FFFFFF" />
+                  <Text style={styles.resultBarText}>
+                    {isCorrect ? 'Correct' : `Incorrect - correct answer: ${puzzle.choices[puzzle.correctIndex]}`}
+                  </Text>
+                </View>
+              ) : null}
             </>
           )}
         </ScrollView>
-
-        <View style={[styles.choices, phase !== 'answer' && styles.choicesDisabled]}>
-          {phase === 'answer' ? puzzle.choices.map((choice, index) => {
-            const active = selected === index;
-            const correctChoice = submitted && index === puzzle.correctIndex;
-            const wrongChoice = submitted && active && !correctChoice;
-            return (
-              <Pressable
-                key={`${choice}-${index}`}
-                onPress={() => submit(index)}
-                style={[
-                  styles.choice,
-                  active && styles.choiceActive,
-                  correctChoice && styles.choiceCorrect,
-                  wrongChoice && styles.choiceWrong
-                ]}
-              >
-                <View style={styles.choiceContent}>
-                  <Text numberOfLines={3} adjustsFontSizeToFit style={[styles.choiceText, (active || correctChoice) && styles.choiceTextActive]}>
-                    {choice}
-                  </Text>
-                  {correctChoice ? <Feather name="check-circle" size={20} color="#FFFFFF" /> : null}
-                  {wrongChoice ? <Feather name="x-circle" size={20} color="#FFFFFF" /> : null}
-                </View>
-              </Pressable>
-            );
-          }) : null}
-        </View>
-
-        {submitted ? (
-          <View style={[styles.resultBar, { backgroundColor: isCorrect ? '#277A5B' : '#C84E2F' }]}>
-            <Feather name={isCorrect ? 'check-circle' : 'x-circle'} size={18} color="#FFFFFF" />
-            <Text style={styles.resultBarText}>
-              {isCorrect ? 'Correct' : `Incorrect - correct answer: ${puzzle.choices[puzzle.correctIndex]}`}
-            </Text>
-          </View>
-        ) : null}
 
         <View style={styles.footer}>
           <Text style={styles.footerHint}>
@@ -234,7 +233,9 @@ const styles = StyleSheet.create({
     fontWeight: '900'
   },
   choices: {
-    gap: 8
+    gap: 8,
+    marginTop: 12,
+    paddingBottom: 8
   },
   choicesDisabled: {
     minHeight: 0
@@ -264,7 +265,8 @@ const styles = StyleSheet.create({
     color: '#20242A',
     fontWeight: '800',
     fontSize: 15,
-    textAlign: 'center',
+    lineHeight: 20,
+    textAlign: 'left',
     flex: 1
   },
   choiceTextActive: {
