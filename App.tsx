@@ -1,7 +1,7 @@
 import { Feather } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { PanResponder, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { domains, domainIds } from './src/data/domains';
 import { publicDomainSources } from './src/data/sourcePuzzles';
@@ -90,9 +90,9 @@ function FeedScreen() {
           <Text style={styles.headerStatLabel}>day streak</Text>
         </View>
       </View>
-      <View style={styles.cardStage}>
+      <SwipePager index={index} total={session.length} onPrevious={goPrevious} onNext={goNext}>
         {current ? <PuzzleCard key={current.id} puzzle={current} height={cardHeight} onAnswered={recordAttempt} /> : null}
-      </View>
+      </SwipePager>
       <PagerControls index={index} total={session.length} onPrevious={goPrevious} onNext={goNext} />
     </View>
   );
@@ -226,10 +226,75 @@ function AssessScreen() {
         </View>
         <Text style={styles.headerNote}>1 per domain</Text>
       </View>
-      <View style={styles.cardStage}>
+      <SwipePager index={index} total={battery.length} onPrevious={goPrevious} onNext={goNext}>
         {current ? <PuzzleCard key={current.id} puzzle={current} height={cardHeight} onAnswered={onAnswered} /> : null}
-      </View>
+      </SwipePager>
       <PagerControls index={index} total={battery.length} onPrevious={goPrevious} onNext={goNext} />
+    </View>
+  );
+}
+
+function SwipePager({
+  index,
+  total,
+  onPrevious,
+  onNext,
+  children
+}: {
+  index: number;
+  total: number;
+  onPrevious: () => void;
+  onNext: () => void;
+  children: ReactNode;
+}) {
+  const lastStepAt = useRef(0);
+  const wheelDelta = useRef(0);
+
+  const step = (direction: 'previous' | 'next') => {
+    if (direction === 'previous' && index <= 0) return;
+    if (direction === 'next' && index >= total - 1) return;
+
+    const now = Date.now();
+    if (now - lastStepAt.current < 620) return;
+    lastStepAt.current = now;
+    wheelDelta.current = 0;
+
+    if (direction === 'previous') onPrevious();
+    else onNext();
+  };
+
+  const panResponder = PanResponder.create({
+    onMoveShouldSetPanResponder: (_, gesture) => {
+      const vertical = Math.abs(gesture.dy);
+      return vertical > 42 && vertical > Math.abs(gesture.dx) * 1.2;
+    },
+    onPanResponderRelease: (_, gesture) => {
+      if (gesture.dy < -58) step('next');
+      if (gesture.dy > 58) step('previous');
+    }
+  });
+
+  const wheelProps = {
+    onWheel: (event: { nativeEvent?: { deltaY?: number; preventDefault?: () => void }; deltaY?: number; preventDefault?: () => void }) => {
+      const deltaY = event.nativeEvent?.deltaY ?? event.deltaY ?? 0;
+      if (Math.abs(deltaY) < 4) return;
+
+      event.preventDefault?.();
+      event.nativeEvent?.preventDefault?.();
+      wheelDelta.current += deltaY;
+
+      if (Math.abs(wheelDelta.current) < 80) return;
+      step(wheelDelta.current > 0 ? 'next' : 'previous');
+    }
+  };
+
+  return (
+    <View style={styles.cardStage} {...panResponder.panHandlers} {...(wheelProps as object)}>
+      <View style={styles.swipeSurface}>{children}</View>
+      <View pointerEvents="none" style={styles.swipeHint}>
+        <Feather name="chevrons-up" size={14} color="#7B848E" />
+        <Text style={styles.swipeHintText}>Swipe or scroll for next</Text>
+      </View>
     </View>
   );
 }
@@ -408,7 +473,30 @@ const styles = StyleSheet.create({
     flex: 1
   },
   cardStage: {
+    flex: 1,
+    overflow: 'hidden'
+  },
+  swipeSurface: {
     flex: 1
+  },
+  swipeHint: {
+    position: 'absolute',
+    bottom: 8,
+    alignSelf: 'center',
+    minHeight: 24,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    backgroundColor: 'rgba(255,255,255,0.86)',
+    borderWidth: 1,
+    borderColor: '#E1DDD1',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4
+  },
+  swipeHintText: {
+    color: '#68717C',
+    fontWeight: '900',
+    fontSize: 11
   },
   pager: {
     minHeight: 54,
