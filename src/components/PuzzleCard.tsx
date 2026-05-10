@@ -76,7 +76,7 @@ export function PuzzleCard({ puzzle, height, onAnswered }: Props) {
         <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent} nestedScrollEnabled showsVerticalScrollIndicator={false}>
           {phase === 'ready' ? (
             <View style={styles.readyPanel}>
-              <Text numberOfLines={5} adjustsFontSizeToFit style={styles.prompt}>{puzzle.studyPrompt ?? 'Get ready to study the pattern.'}</Text>
+              <Text style={styles.prompt}>{puzzle.studyPrompt ?? 'Get ready to study the pattern.'}</Text>
               <Text style={styles.readyText}>Start when you are ready. The study screen will disappear automatically.</Text>
               <Pressable style={styles.primaryAction} onPress={beginStudy}>
                 <Text style={styles.primaryActionText}>I'm ready</Text>
@@ -84,7 +84,7 @@ export function PuzzleCard({ puzzle, height, onAnswered }: Props) {
             </View>
           ) : (
             <>
-              <Text numberOfLines={5} adjustsFontSizeToFit style={styles.prompt}>
+              <Text style={styles.prompt}>
                 {phase === 'study' ? puzzle.studyPrompt ?? puzzle.prompt : phase === 'interference' ? puzzle.interferencePrompt ?? 'Hold the earlier item in mind.' : puzzle.prompt}
               </Text>
               <PuzzleVisual visual={phase === 'study' ? puzzle.studyVisual ?? puzzle.visual : phase === 'interference' ? puzzle.interferenceVisual : puzzle.visual} />
@@ -159,17 +159,22 @@ export function PuzzleCard({ puzzle, height, onAnswered }: Props) {
 
 const styles = StyleSheet.create({
   outer: {
-    paddingHorizontal: 10,
+    paddingHorizontal: 8,
     paddingVertical: 6
   },
   card: {
     flex: 1,
-    borderRadius: 8,
-    padding: 12,
+    borderRadius: 16,
+    padding: 16,
     borderWidth: 1,
-    borderColor: '#E0DED5',
+    borderColor: '#D8E3F0',
     justifyContent: 'space-between',
-    backgroundColor: '#FFFDF8'
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#162033',
+    shadowOpacity: 0.12,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 4
   },
   body: {
     flex: 1,
@@ -178,49 +183,50 @@ const styles = StyleSheet.create({
   bodyContent: {
     flexGrow: 1,
     justifyContent: 'flex-start',
-    paddingTop: 8,
-    paddingBottom: 8
+    paddingTop: 18,
+    paddingBottom: 16
   },
   prompt: {
-    color: '#20242A',
-    fontSize: 20,
-    lineHeight: 25,
+    color: '#141B2D',
+    fontSize: 22,
+    lineHeight: 29,
     fontWeight: '900'
   },
   choices: {
-    gap: 8,
-    marginTop: 12,
+    gap: 10,
+    marginTop: 18,
     paddingBottom: 8
   },
   choicesDisabled: {
     minHeight: 0
   },
   choice: {
-    minHeight: 44,
-    borderRadius: 8,
+    minHeight: 58,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#D3D7DD',
-    backgroundColor: '#FFFFFF',
+    borderColor: '#C9D7EA',
+    backgroundColor: '#F8FBFF',
     justifyContent: 'center',
-    paddingHorizontal: 12
+    paddingHorizontal: 14,
+    paddingVertical: 10
   },
   choiceActive: {
-    borderColor: '#20242A',
-    backgroundColor: '#20242A'
+    borderColor: '#2457D6',
+    backgroundColor: '#2457D6'
   },
   choiceCorrect: {
-    borderColor: '#277A5B',
-    backgroundColor: '#277A5B'
+    borderColor: '#0A8F5A',
+    backgroundColor: '#0A8F5A'
   },
   choiceWrong: {
-    borderColor: '#C84E2F',
-    backgroundColor: '#C84E2F'
+    borderColor: '#D9324A',
+    backgroundColor: '#D9324A'
   },
   choiceText: {
-    color: '#20242A',
+    color: '#182235',
     fontWeight: '800',
-    fontSize: 15,
-    lineHeight: 20,
+    fontSize: 16,
+    lineHeight: 22,
     textAlign: 'left',
     flex: 1
   },
@@ -232,7 +238,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end'
   },
   footerHint: {
-    color: '#68717C',
+    color: '#6D7890',
     fontWeight: '700',
     fontSize: 12
   },
@@ -241,15 +247,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center'
   },
   readyText: {
-    color: '#5D6670',
-    fontSize: 14,
-    lineHeight: 20,
+    color: '#44516A',
+    fontSize: 15,
+    lineHeight: 22,
     fontWeight: '700'
   },
   primaryAction: {
-    backgroundColor: '#20242A',
-    minHeight: 48,
-    borderRadius: 8,
+    backgroundColor: '#2457D6',
+    minHeight: 54,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 18
@@ -260,7 +266,7 @@ const styles = StyleSheet.create({
     fontSize: 16
   },
   studyHint: {
-    color: '#68717C',
+    color: '#56647C',
     fontWeight: '800',
     textAlign: 'center'
   },
@@ -271,8 +277,8 @@ const styles = StyleSheet.create({
     gap: 8
   },
   resultBar: {
-    minHeight: 38,
-    borderRadius: 8,
+    minHeight: 44,
+    borderRadius: 12,
     paddingHorizontal: 12,
     marginTop: 8,
     flexDirection: 'row',
@@ -285,10 +291,10 @@ const styles = StyleSheet.create({
     flex: 1
   },
   feedbackPanel: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F8FBFF',
     borderWidth: 1,
-    borderRadius: 8,
-    padding: 10,
+    borderRadius: 12,
+    padding: 12,
     gap: 4,
     marginTop: 10
   },
@@ -300,7 +306,7 @@ const styles = StyleSheet.create({
     fontSize: 16
   },
   feedbackText: {
-    color: '#39414A',
+    color: '#273248',
     fontWeight: '700',
     fontSize: 12,
     lineHeight: 16

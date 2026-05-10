@@ -77,11 +77,11 @@ function arithmeticProgression(level: number) {
 }
 
 function hiddenTokens(count: number, color = '#CDD3DA') {
-  return Array.from({ length: count }, (_, index) => token(String(index + 1), color));
+  return Array.from({ length: count }, () => token('', color));
 }
 
 function hiddenSequence(count: number, color = '#CDD3DA') {
-  return Array.from({ length: count }, (_, index) => token(`#${index + 1}`, color));
+  return Array.from({ length: count }, () => token('', color));
 }
 
 function studyMs(difficulty: number, base = 2600) {
@@ -366,11 +366,11 @@ function operationSpan(difficulty: number): PuzzleRound {
     subtitle: 'Storage plus mental verification',
     difficulty,
     isAssessment: false,
-    prompt: 'Recall the letters paired with true equations.',
+    prompt: 'Which letters were paired with equations that were actually true?',
     visual: { mode: 'tiles', tokens: hiddenTokens(rows.length), columns: rows.length },
     requiresReady: true,
-    studyPrompt: 'Check each equation and remember only the letters on true equations.',
-    studyVisual: { mode: 'tiles', tokens: rows.map((row) => token(`${row.text} ${row.letter}`, row.valid ? '#2E6F95' : '#A8B4BF')), columns: 1 },
+    studyPrompt: 'For each tile, check the equation. Remember the letter only if that equation is true.',
+    studyVisual: { mode: 'tiles', tokens: rows.map((row) => token(`${row.letter}\n${row.text}`, '#2E6F95')), columns: 1 },
     studyDurationMs: studyMs(difficulty, 3600),
     choices,
     correctIndex,
@@ -496,15 +496,15 @@ function stopSignal(difficulty: number): PuzzleRound {
     subtitle: 'Go/no-go response inhibition',
     difficulty,
     isAssessment: false,
-    prompt: 'Tap circles only. How many taps should you make?',
+    prompt: 'During the flash, count only circles. How many circles were shown?',
     visual: { mode: 'tiles', tokens: hiddenTokens(items.length), columns: items.length },
     requiresReady: true,
-    studyPrompt: 'Count only the go targets. Ignore the no-go shapes.',
+    studyPrompt: 'Count only circles. Ignore squares and triangles.',
     studyVisual: { mode: 'tiles', tokens: items.map((item) => token(item, item === 'circle' ? '#277A5B' : '#C8D0CC')), columns: items.length },
     studyDurationMs: studyMs(difficulty, 2200),
     choices,
     correctIndex,
-    explanation: `Only circles count, so the answer is ${goCount}.`
+    explanation: `Only circles count. Squares and triangles are distractors, so the answer is ${goCount}.`
   };
 }
 
@@ -646,7 +646,7 @@ function categorySwap(difficulty: number): PuzzleRound {
     difficulty,
     isAssessment: false,
     prompt: `Rule now: choose the ${rule}.`,
-    visual: { mode: 'tiles', tokens: choices.map((choice) => token(choice, choice === answer ? '#7B5E2F' : '#D9CDB9')), columns: 2 },
+    visual: { mode: 'tiles', tokens: choices.map((choice) => token(choice, '#7B5E2F')), columns: 2 },
     choices,
     correctIndex,
     explanation: `${answer} fits the current ${rule} rule.`
@@ -760,7 +760,7 @@ function oddOneOut(difficulty: number): PuzzleRound {
     difficulty,
     isAssessment: false,
     prompt: 'Which item does not belong?',
-    visual: { mode: 'tiles', tokens: choicesRaw.map((choice) => token(choice, choice === answer ? '#5D5BB4' : '#D7D6F0')), columns: 2 },
+    visual: { mode: 'tiles', tokens: choicesRaw.map((choice) => token(choice, '#5D5BB4')), columns: 2 },
     choices: choicesRaw,
     correctIndex: choicesRaw.indexOf(answer),
     explanation: `${answer} comes from a different category.`

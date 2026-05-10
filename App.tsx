@@ -65,7 +65,7 @@ function usePwaInstallSupport() {
     ensureLink('manifest', '/manifest.json');
     ensureLink('icon', '/icon.svg', { type: 'image/svg+xml' });
     ensureLink('apple-touch-icon', '/maskable-icon.svg');
-    ensureMeta('theme-color', '#FFFDF8');
+    ensureMeta('theme-color', '#EEF4FF');
     ensureMeta('apple-mobile-web-app-capable', 'yes');
     ensureMeta('apple-mobile-web-app-title', 'PuzzleScroll');
     ensureMeta('mobile-web-app-capable', 'yes');
@@ -177,15 +177,29 @@ function DashboardScreen({ onStartFeed, onStartCheck }: { onStartFeed: () => voi
   const attempts = useAppStore((state) => state.attempts);
   const streakDays = useAppStore((state) => state.streakDays);
   const feedSettings = useAppStore((state) => state.feedSettings);
-  const recent = attempts.filter((attempt) => !attempt.isAssessment).slice(0, 20);
+  const assessments = useAppStore((state) => state.assessments);
+  const practiceAttempts = attempts.filter((attempt) => !attempt.isAssessment);
+  const recent = practiceAttempts.slice(0, 20);
   const accuracy = recent.length ? Math.round((recent.reduce((sum, attempt) => sum + attempt.accuracy, 0) / recent.length) * 100) : 0;
-  const hardSolved = attempts.filter((attempt) => hardTypeIds.has(attempt.puzzleType)).length;
+  const hardSolved = practiceAttempts.filter((attempt) => hardTypeIds.has(attempt.puzzleType)).length;
   const activeMode = feedModes.find((mode) => mode.id === feedSettings.mode)?.label ?? 'Mixed Daily';
+  const now = new Date();
+  const todayStart = new Date(now);
+  todayStart.setHours(0, 0, 0, 0);
+  const weekStart = new Date(todayStart);
+  weekStart.setDate(weekStart.getDate() - 6);
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const inRange = (from: Date) => practiceAttempts.filter((attempt) => attempt.completedAt >= from.getTime());
+  const todayAttempts = inRange(todayStart);
+  const weekAttempts = inRange(weekStart);
+  const monthAttempts = inRange(monthStart);
+  const minutesFor = (items: PuzzleAttempt[]) => Math.round(items.reduce((sum, attempt) => sum + Math.max(0.25, attempt.reactionTimeMs / 60000), 0));
+  const weekAccuracy = weekAttempts.length ? Math.round((weekAttempts.reduce((sum, attempt) => sum + attempt.accuracy, 0) / weekAttempts.length) * 100) : 0;
+  const lastCheck = assessments[0]?.date ? new Date(assessments[0].date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'Not yet';
 
   return (
     <ScrollView contentContainerStyle={styles.scrollContent}>
-      <Text style={styles.kicker}>Dashboard</Text>
-      <Text style={styles.screenTitle}>Train instead of scrolling</Text>
+      <Text style={styles.screenTitle}>PuzzleScroll</Text>
       <View style={styles.dashboardHero}>
         <View>
           <Text style={styles.heroMode}>{activeMode}</Text>
@@ -197,21 +211,31 @@ function DashboardScreen({ onStartFeed, onStartCheck }: { onStartFeed: () => voi
         </Pressable>
       </View>
       <View style={styles.statsRow}>
+        <Metric label="Today" value={`${minutesFor(todayAttempts)}m`} />
+        <Metric label="Puzzles" value={String(todayAttempts.length)} />
         <Metric label="Streak" value={String(streakDays)} />
-        <Metric label="Accuracy" value={`${accuracy}%`} />
-        <Metric label="Hard" value={String(hardSolved)} />
+      </View>
+      <View style={styles.statsRow}>
+        <Metric label="7 days" value={`${minutesFor(weekAttempts)}m`} />
+        <Metric label="Month" value={`${minutesFor(monthAttempts)}m`} />
+        <Metric label="Week acc" value={`${weekAccuracy}%`} />
+      </View>
+      <View style={styles.statsRow}>
+        <Metric label="Recent acc" value={`${accuracy}%`} />
+        <Metric label="Hard solved" value={String(hardSolved)} />
+        <Metric label="Last check" value={lastCheck} />
       </View>
       <Pressable style={styles.dashboardAction} onPress={onStartCheck}>
         <View>
-          <Text style={styles.domainName}>Daily Brain Check</Text>
-          <Text style={styles.domainDescription}>Optional short baseline for cleaner trends.</Text>
+          <Text style={styles.domainName}>Brain Check</Text>
+          <Text style={styles.domainDescription}>Short baseline for today.</Text>
         </View>
         <Feather name="chevron-right" size={20} color="#20242A" />
       </Pressable>
       <Pressable style={styles.dashboardAction} onPress={onStartFeed}>
         <View>
-          <Text style={styles.domainName}>Immersive Feed</Text>
-          <Text style={styles.domainDescription}>Header and navigation hide while you train.</Text>
+          <Text style={styles.domainName}>Start Training</Text>
+          <Text style={styles.domainDescription}>{activeMode} · {sessionGoals.find((goal) => goal.id === feedSettings.sessionGoal)?.label ?? '10 min'}</Text>
         </View>
         <Feather name="chevron-right" size={20} color="#20242A" />
       </Pressable>
@@ -709,7 +733,7 @@ export default function App() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#F7F4EA'
+    backgroundColor: '#EEF4FF'
   },
   appBody: {
     flex: 1
@@ -729,9 +753,9 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.92)',
+    backgroundColor: 'rgba(255,255,255,0.96)',
     borderWidth: 1,
-    borderColor: '#E1DDD1',
+    borderColor: '#C9D7EA',
     alignItems: 'center',
     justifyContent: 'center'
   },
@@ -745,15 +769,15 @@ const styles = StyleSheet.create({
     minHeight: 24,
     borderRadius: 8,
     paddingHorizontal: 10,
-    backgroundColor: 'rgba(255,255,255,0.86)',
+    backgroundColor: 'rgba(255,255,255,0.92)',
     borderWidth: 1,
-    borderColor: '#E1DDD1',
+    borderColor: '#C9D7EA',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4
   },
   swipeHintText: {
-    color: '#68717C',
+    color: '#56647C',
     fontWeight: '900',
     fontSize: 11
   },
@@ -765,16 +789,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#FFFDF8',
+    backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
-    borderTopColor: '#E4E0D5'
+    borderTopColor: '#C9D7EA'
   },
   pagerButton: {
     minWidth: 92,
     minHeight: 40,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#D6DADF',
+    borderColor: '#C9D7EA',
     backgroundColor: '#FFFFFF',
     flexDirection: 'row',
     alignItems: 'center',
@@ -785,14 +809,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#F1F2F2'
   },
   pagerButtonText: {
-    color: '#20242A',
+    color: '#141B2D',
     fontWeight: '900'
   },
   pagerButtonTextDisabled: {
     color: '#A9B0B8'
   },
   pagerCount: {
-    color: '#5D6670',
+    color: '#44516A',
     fontWeight: '900'
   },
   appHeader: {
@@ -804,11 +828,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     borderBottomWidth: 1,
-    borderBottomColor: '#E4E0D5',
-    backgroundColor: '#FFFDF8'
+    borderBottomColor: '#C9D7EA',
+    backgroundColor: '#FFFFFF'
   },
   appTitle: {
-    color: '#20242A',
+    color: '#141B2D',
     fontSize: 24,
     lineHeight: 29,
     fontWeight: '900'
@@ -816,7 +840,7 @@ const styles = StyleSheet.create({
   headerStat: {
     minWidth: 72,
     borderRadius: 8,
-    backgroundColor: '#20242A',
+    backgroundColor: '#2457D6',
     paddingVertical: 8,
     paddingHorizontal: 10,
     alignItems: 'center'
@@ -832,7 +856,7 @@ const styles = StyleSheet.create({
     fontSize: 10
   },
   headerNote: {
-    color: '#5D6670',
+    color: '#44516A',
     fontWeight: '900'
   },
   summary: {
@@ -845,20 +869,20 @@ const styles = StyleSheet.create({
     paddingBottom: 120
   },
   kicker: {
-    color: '#68717C',
+    color: '#56647C',
     fontWeight: '900',
     fontSize: 13,
     textTransform: 'uppercase'
   },
   screenTitle: {
-    color: '#20242A',
+    color: '#141B2D',
     fontSize: 30,
     lineHeight: 35,
     fontWeight: '900',
     marginTop: 5
   },
   summaryText: {
-    color: '#5D6670',
+    color: '#44516A',
     fontSize: 15,
     lineHeight: 21,
     fontWeight: '700',
@@ -880,7 +904,7 @@ const styles = StyleSheet.create({
     marginTop: 18,
     marginBottom: 14,
     borderRadius: 8,
-    backgroundColor: '#20242A',
+    backgroundColor: '#162033',
     padding: 18,
     justifyContent: 'space-between'
   },
@@ -901,7 +925,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     minHeight: 42,
     borderRadius: 8,
-    backgroundColor: '#426A3F',
+    backgroundColor: '#0A8F5A',
     paddingHorizontal: 14,
     flexDirection: 'row',
     alignItems: 'center',
@@ -912,7 +936,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#E1DDD1',
+    borderColor: '#C9D7EA',
     padding: 14,
     marginBottom: 10,
     flexDirection: 'row',
@@ -925,16 +949,16 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#E1DDD1',
+    borderColor: '#C9D7EA',
     padding: 14
   },
   metricValue: {
-    color: '#20242A',
+    color: '#141B2D',
     fontSize: 22,
     fontWeight: '900'
   },
   metricLabel: {
-    color: '#68717C',
+    color: '#56647C',
     fontWeight: '800'
   },
   domainRow: {
@@ -945,7 +969,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 12,
     borderWidth: 1,
-    borderColor: '#E1DDD1',
+    borderColor: '#C9D7EA',
     marginBottom: 10
   },
   domainIcon: {
@@ -959,12 +983,12 @@ const styles = StyleSheet.create({
     flex: 1
   },
   domainName: {
-    color: '#20242A',
+    color: '#141B2D',
     fontWeight: '900',
     fontSize: 15
   },
   domainDescription: {
-    color: '#68717C',
+    color: '#56647C',
     fontWeight: '700',
     fontSize: 12,
     marginTop: 2
@@ -972,17 +996,17 @@ const styles = StyleSheet.create({
   scorePill: {
     minWidth: 68,
     alignItems: 'center',
-    backgroundColor: '#F3F5F4',
+    backgroundColor: '#EAF2FF',
     borderRadius: 8,
     paddingVertical: 7
   },
   scoreText: {
-    color: '#20242A',
+    color: '#141B2D',
     fontWeight: '900',
     fontSize: 18
   },
   scoreTrend: {
-    color: '#68717C',
+    color: '#56647C',
     fontSize: 10,
     fontWeight: '800'
   },
@@ -991,18 +1015,18 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#E1DDD1',
+    borderColor: '#C9D7EA',
     padding: 14,
     flexDirection: 'row',
     justifyContent: 'space-between'
   },
   resultScore: {
-    color: '#20242A',
+    color: '#141B2D',
     fontWeight: '900',
     fontSize: 18
   },
   primaryButton: {
-    backgroundColor: '#20242A',
+    backgroundColor: '#2457D6',
     borderRadius: 8,
     paddingVertical: 14,
     alignItems: 'center',
@@ -1024,24 +1048,24 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#E1DDD1',
+    borderColor: '#C9D7EA',
     padding: 10,
     justifyContent: 'center'
   },
   modeTileActive: {
-    borderColor: '#20242A',
-    backgroundColor: '#F4F6F1'
+    borderColor: '#2457D6',
+    backgroundColor: '#EAF2FF'
   },
   modeLabel: {
-    color: '#20242A',
+    color: '#141B2D',
     fontWeight: '900',
     fontSize: 14
   },
   modeLabelActive: {
-    color: '#20242A'
+    color: '#141B2D'
   },
   modeNote: {
-    color: '#68717C',
+    color: '#56647C',
     fontWeight: '700',
     fontSize: 11,
     lineHeight: 15,
@@ -1056,18 +1080,18 @@ const styles = StyleSheet.create({
     minHeight: 40,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#D6DADF',
+    borderColor: '#C9D7EA',
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 6
   },
   segmentButtonActive: {
-    backgroundColor: '#20242A',
-    borderColor: '#20242A'
+    backgroundColor: '#2457D6',
+    borderColor: '#2457D6'
   },
   segmentText: {
-    color: '#20242A',
+    color: '#141B2D',
     fontWeight: '900',
     fontSize: 12
   },
@@ -1081,7 +1105,7 @@ const styles = StyleSheet.create({
   },
   primaryButtonSmall: {
     flex: 1,
-    backgroundColor: '#20242A',
+    backgroundColor: '#2457D6',
     borderRadius: 8,
     minHeight: 44,
     alignItems: 'center',
@@ -1091,7 +1115,7 @@ const styles = StyleSheet.create({
   secondaryButtonSmall: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-    borderColor: '#D6DADF',
+    borderColor: '#C9D7EA',
     borderWidth: 1,
     borderRadius: 8,
     minHeight: 44,
@@ -1104,11 +1128,11 @@ const styles = StyleSheet.create({
     fontWeight: '900'
   },
   secondaryButtonText: {
-    color: '#20242A',
+    color: '#141B2D',
     fontWeight: '900'
   },
   sectionTitle: {
-    color: '#20242A',
+    color: '#141B2D',
     fontSize: 18,
     lineHeight: 23,
     fontWeight: '900',
@@ -1123,20 +1147,20 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 12,
     borderWidth: 1,
-    borderColor: '#E1DDD1',
+    borderColor: '#C9D7EA',
     marginBottom: 10
   },
   selectorRowActive: {
-    borderColor: '#20242A'
+    borderColor: '#2457D6'
   },
   typeGroup: {
     borderTopWidth: 1,
-    borderTopColor: '#E1DDD1',
+    borderTopColor: '#C9D7EA',
     paddingTop: 12,
     marginTop: 8
   },
   typeGroupTitle: {
-    color: '#20242A',
+    color: '#141B2D',
     fontWeight: '900',
     fontSize: 15,
     marginBottom: 4
@@ -1156,11 +1180,11 @@ const styles = StyleSheet.create({
   },
   typeName: {
     flex: 1,
-    color: '#20242A',
+    color: '#141B2D',
     fontWeight: '800'
   },
   typeMeta: {
-    color: '#68717C',
+    color: '#56647C',
     fontWeight: '900',
     fontSize: 12
   },
@@ -1169,16 +1193,16 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#E1DDD1',
+    borderColor: '#C9D7EA',
     padding: 16
   },
   infoTitle: {
-    color: '#20242A',
+    color: '#141B2D',
     fontWeight: '900',
     fontSize: 16
   },
   infoBody: {
-    color: '#5D6670',
+    color: '#44516A',
     fontWeight: '700',
     lineHeight: 21,
     marginTop: 6
@@ -1199,8 +1223,8 @@ const styles = StyleSheet.create({
     height: 68,
     flexDirection: 'row',
     borderTopWidth: 1,
-    borderTopColor: '#E1DDD1',
-    backgroundColor: '#FFFDF8'
+    borderTopColor: '#C9D7EA',
+    backgroundColor: '#FFFFFF'
   },
   tabButton: {
     flex: 1,
@@ -1214,7 +1238,7 @@ const styles = StyleSheet.create({
     fontWeight: '800'
   },
   tabTextActive: {
-    color: '#20242A'
+    color: '#141B2D'
   },
   modalBackdrop: {
     flex: 1,
@@ -1223,14 +1247,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center'
   },
   modalPanel: {
-    backgroundColor: '#FFFDF8',
+    backgroundColor: '#FFFFFF',
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#E1DDD1',
+    borderColor: '#C9D7EA',
     padding: 18
   },
   modalTitle: {
-    color: '#20242A',
+    color: '#141B2D',
     fontSize: 24,
     lineHeight: 29,
     fontWeight: '900',
