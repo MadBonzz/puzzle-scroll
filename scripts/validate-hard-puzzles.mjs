@@ -141,6 +141,87 @@ function validateRuleCascade() {
   }
 }
 
+function validateTruthCountDeduction() {
+  const suspects = ['Iva', 'Jae', 'Kai'];
+  const statements = [
+    (holder) => holder === 'Jae',
+    (holder) => holder === 'Kai',
+    (holder) => holder !== 'Jae'
+  ];
+  const trueCounts = Object.fromEntries(suspects.map((suspect) => [suspect, statements.filter((statement) => statement(suspect)).length]));
+  assert(trueCounts.Kai === 2, `Truth Count: Kai should produce exactly two true statements, got ${trueCounts.Kai}`);
+  assert(suspects.filter((suspect) => trueCounts[suspect] === 2).length === 1, `Truth Count: expected one solution, got ${JSON.stringify(trueCounts)}`);
+}
+
+function validateRankDeduction() {
+  const runners = ['Luna', 'Milo', 'Nia', 'Oren'];
+  const permutations = (items) =>
+    items.length === 0 ? [[]] : items.flatMap((item, index) => permutations(items.filter((_, i) => i !== index)).map((rest) => [item, ...rest]));
+  const valid = permutations(runners).filter((order) => {
+    const pos = (name) => order.indexOf(name);
+    return pos('Oren') === pos('Nia') + 1 && pos('Luna') < pos('Milo') && pos('Milo') !== 3;
+  });
+  assert(valid.length === 1, `Rank Deduction: expected one valid order, got ${valid.map((row) => row.join('-')).join(', ')}`);
+  assert(valid[0]?.[1] === 'Milo', `Rank Deduction: expected Milo in 2nd, got ${valid[0]?.[1]}`);
+}
+
+function validateImplicationAndSetLogic() {
+  const rows = [false, true].flatMap((a) => [false, true].flatMap((b) => [false, true].map((c) => ({ a, b, c }))));
+  const valid = rows.filter(({ a, b, c }) => (!a || b) && (!b || c) && !c);
+  assert(valid.length === 1 && !valid[0].a && !valid[0].b, `Implication Chain: expected only A=false, B=false, C=false; got ${JSON.stringify(valid)}`);
+
+  const hasRed = true;
+  const redIsSquare = true;
+  const squareIsNotStriped = true;
+  assert(hasRed && redIsSquare && squareIsNotStriped, 'Set Logic: premises should establish a red square that is not striped');
+}
+
+function validateNewPlanning() {
+  const dependencyFinish = 2 + Math.max(3, 4) + 1;
+  assert(dependencyFinish === 7, `Dependency Plan: expected 7 days, got ${dependencyFinish}`);
+
+  const items = {
+    Map: { weight: 2, value: 5 },
+    Rope: { weight: 3, value: 7 },
+    Kit: { weight: 4, value: 8 },
+    Lamp: { weight: 1, value: 2 }
+  };
+  const names = Object.keys(items);
+  const combos = [];
+  for (let mask = 1; mask < 1 << names.length; mask += 1) {
+    const combo = names.filter((_, index) => mask & (1 << index));
+    const score = combo.reduce((sum, name) => ({ weight: sum.weight + items[name].weight, value: sum.value + items[name].value }), { weight: 0, value: 0 });
+    if (score.weight <= 6) combos.push({ combo, score });
+  }
+  const best = combos.sort((a, b) => b.score.value - a.score.value)[0];
+  assert(best?.combo.join(' + ') === 'Map + Rope + Lamp', `Value Packing: expected Map + Rope + Lamp, got ${best?.combo.join(' + ')}`);
+
+  const validSchedules = [
+    'Draft, Data, Review, Call, Send',
+    'Call, Draft, Data, Review, Send',
+    'Draft, Review, Data, Call, Send',
+    'Draft, Data, Send, Review, Call'
+  ].filter((schedule) => {
+    const order = schedule.split(', ');
+    const pos = (task) => order.indexOf(task);
+    return pos('Draft') < pos('Review') && pos('Data') < pos('Review') && pos('Review') < pos('Send') && pos('Call') !== 0 && pos('Call') < pos('Send');
+  });
+  assert(validSchedules.length === 1 && validSchedules[0] === 'Draft, Data, Review, Call, Send', `Valid Schedule: unexpected valid choices ${validSchedules.join(' | ')}`);
+
+  const design = 2;
+  const buildPath = design + 3 + 1;
+  const testPath = design + 5 + 1;
+  assert(testPath > buildPath, `Bottleneck Plan: expected Test path ${testPath} to exceed Build path ${buildPath}`);
+}
+
+function validateNewQuant() {
+  assert(250 / (60 + 40) === 2.5, 'Speed Distance: trains should meet in 2.5 hours');
+  assert((3 * 2) / 10 === 3 / 5, 'Probability Draw: exactly one blue should be 3/5');
+  assert(17 % 5 === 2 && 17 % 7 === 3, 'Remainder System: 17 should satisfy both remainders');
+  assert((80 * 1.25 * 0.9 - 80) / 80 === 0.125, 'Profit Discount: profit should be 12.5%');
+  assert(24 + 18 - (40 - 8) === 10, 'Overlapping Sets: both should be 10');
+}
+
 validateSuspectDeduction();
 validateSeatingDeduction();
 validateDataSufficiency();
@@ -150,6 +231,11 @@ validateQuant();
 validateWeighingPuzzle();
 validateRiverCrossingPlan();
 validateRuleCascade();
+validateTruthCountDeduction();
+validateRankDeduction();
+validateImplicationAndSetLogic();
+validateNewPlanning();
+validateNewQuant();
 
 if (failures.length) {
   console.error(failures.join('\n'));

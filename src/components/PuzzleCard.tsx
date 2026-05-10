@@ -142,12 +142,12 @@ export function PuzzleCard({ puzzle, height, onAnswered }: Props) {
         <View style={styles.footer}>
           <Text style={styles.footerHint}>
             {submitted
-              ? 'Result saved. Swipe up for another puzzle.'
+              ? 'Result saved. Press Next when you are ready.'
               : phase === 'ready'
                 ? 'Press ready before the timed display begins.'
                 : phase === 'study'
                   ? 'Memorize what you see.'
-                  : 'Answer, then swipe up for another puzzle.'}
+                  : 'Answer, then press Next for another puzzle.'}
           </Text>
         </View>
       </View>

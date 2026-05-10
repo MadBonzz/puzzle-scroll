@@ -1,6 +1,6 @@
 import { Feather } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { domains, domainIds } from './src/data/domains';
@@ -61,21 +61,22 @@ function FeedScreen() {
   const feedSettings = useAppStore((state) => state.feedSettings);
   const recordAttempt = useAppStore((state) => state.recordAttempt);
   const streakDays = useAppStore((state) => state.streakDays);
-  const session = useMemo(
-    () =>
-      generateDailySession(
-        Object.fromEntries(domainIds.map((domain) => [domain, domainsState[domain].currentLevel])) as Record<CognitiveDomain, number>,
-        18,
-        feedSettings
-      ),
-    [domainsState, feedSettings]
-  );
+  const buildSession = () =>
+    generateDailySession(
+      Object.fromEntries(domainIds.map((domain) => [domain, domainsState[domain].currentLevel])) as Record<CognitiveDomain, number>,
+      18,
+      feedSettings
+    );
+  const [session, setSession] = useState(buildSession);
   const cardHeight = Math.max(430, height - 148);
   const [index, setIndex] = useState(0);
   const current = session[index] ?? session[0];
   const goNext = () => setIndex((value) => Math.min(value + 1, session.length - 1));
   const goPrevious = () => setIndex((value) => Math.max(value - 1, 0));
-  useEffect(() => setIndex(0), [feedSettings]);
+  useEffect(() => {
+    setSession(buildSession());
+    setIndex(0);
+  }, [feedSettings]);
 
   return (
     <View style={styles.screen}>
@@ -156,15 +157,18 @@ function AssessScreen() {
   const [scores, setScores] = useState<Partial<Record<CognitiveDomain, AssessmentScore>>>({});
   const [complete, setComplete] = useState(false);
   const { height } = useWindowDimensions();
-  const battery = useMemo(
-    () => generateAssessmentBattery(Object.fromEntries(domainIds.map((domain) => [domain, domainScores[domain].currentLevel])) as Record<CognitiveDomain, number>),
-    [batteryId, domainScores]
-  );
+  const buildBattery = () => generateAssessmentBattery(Object.fromEntries(domainIds.map((domain) => [domain, domainScores[domain].currentLevel])) as Record<CognitiveDomain, number>);
+  const [battery, setBattery] = useState(buildBattery);
   const cardHeight = Math.max(430, height - 148);
   const [index, setIndex] = useState(0);
   const current = battery[index] ?? battery[0];
   const goNext = () => setIndex((value) => Math.min(value + 1, battery.length - 1));
   const goPrevious = () => setIndex((value) => Math.max(value - 1, 0));
+
+  useEffect(() => {
+    setBattery(buildBattery());
+    setIndex(0);
+  }, [batteryId]);
 
   const onAnswered = (attempt: PuzzleAttempt) => {
     recordAttempt(attempt);

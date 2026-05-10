@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSyncExternalStore } from 'react';
 import { domainIds } from '../data/domains';
-import { allTrainingPuzzleTypeIds } from '../logic/puzzleGenerators';
+import { allTrainingPuzzleTypeIds, trainingGeneratorEntries } from '../logic/puzzleGenerators';
 import type { Assessment, CognitiveDomain, DomainScore, FeedSettings, PuzzleAttempt } from '../types';
 import { adjustDifficulty, createInitialScores, scoreAssessment, trendFromScores } from '../logic/scoring';
 
@@ -154,28 +154,7 @@ const actions = {
   },
   enableHardFeedPuzzles: () => {
     const hardDomains: CognitiveDomain[] = ['reasoning', 'planning', 'quantitative', 'language'];
-    const hardTypes = [
-      'interleaved-sequence',
-      'logic-lock',
-      'balance-code',
-      'logic-grid',
-      'conditional-syllogism',
-      'spatial-transform',
-      'suspect-deduction',
-      'verbal-analogy',
-      'constraint-clue',
-      'critical-assumption',
-      'cryptic-clue',
-      'resource-schedule',
-      'planning-grid',
-      'seating-deduction',
-      'weighing-puzzle',
-      'river-crossing-plan',
-      'symbolic-pattern',
-      'quant-balance',
-      'data-sufficiency',
-      'work-rate'
-    ];
+    const hardTypes = hardDomains.flatMap((domain) => trainingGeneratorEntries[domain].filter((entry) => entry.complexity === 'Hard').map((entry) => entry.typeId));
     setStore({ feedSettings: { enabledDomains: hardDomains, enabledPuzzleTypes: hardTypes } });
   },
   resetProgress: () => {

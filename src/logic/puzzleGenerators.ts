@@ -3,7 +3,7 @@ import { publicDomainSources } from '../data/sourcePuzzles';
 import type { CognitiveDomain, PuzzleRound, VisualToken } from '../types';
 
 type Generator = (difficulty: number, isAssessment?: boolean) => PuzzleRound;
-type GeneratorEntry = {
+export type GeneratorEntry = {
   typeId: string;
   typeName: string;
   generator: Generator;
@@ -1461,6 +1461,350 @@ function crypticClue(difficulty: number): PuzzleRound {
   };
 }
 
+function truthCountDeduction(difficulty: number): PuzzleRound {
+  const answer = 'Kai';
+  const { choices, correctIndex } = withAnswer(['Iva', 'Jae', 'No one can be determined'], answer);
+  return {
+    id: id('truth-count-deduction'),
+    domain: 'reasoning',
+    typeId: 'truth-count-deduction',
+    typeName: 'Truth Count',
+    subtitle: 'Truth-table deduction',
+    difficulty,
+    isAssessment: false,
+    prompt: 'Exactly two statements are true. Who has the map?',
+    visual: {
+      mode: 'rules',
+      note: 'Statements',
+      lines: ['Iva: Jae has the map.', 'Jae: Kai has the map.', 'Kai: Jae does not have the map.']
+    },
+    choices,
+    correctIndex,
+    explanation: 'If Kai has the map, Jae and Kai speak truthfully while Iva is false. That is exactly two true statements.',
+    source: {
+      title: publicDomainSources.dudeneyCanterbury.title,
+      url: publicDomainSources.dudeneyCanterbury.url,
+      note: 'Adapted from public-domain truth-count logic puzzle formats.'
+    }
+  };
+}
+
+function rankDeduction(difficulty: number): PuzzleRound {
+  const answer = 'Milo';
+  const { choices, correctIndex } = withAnswer(['Luna', 'Nia', 'Oren'], answer);
+  return {
+    id: id('rank-deduction'),
+    domain: 'reasoning',
+    typeId: 'rank-deduction',
+    typeName: 'Rank Deduction',
+    subtitle: 'Ordering with adjacency constraints',
+    difficulty,
+    isAssessment: false,
+    prompt: 'Four runners finished 1st to 4th. Who finished 2nd?',
+    visual: {
+      mode: 'rules',
+      note: 'Clues',
+      lines: ['Nia finished immediately before Oren.', 'Luna finished before Milo.', 'Milo did not finish 4th.']
+    },
+    choices,
+    correctIndex,
+    explanation: 'Nia-Oren cannot be 1-2 or 2-3, because Luna must be before Milo and Milo cannot be 4th. The order is Luna, Milo, Nia, Oren.',
+    source: {
+      title: publicDomainSources.dudeneyCanterbury.title,
+      url: publicDomainSources.dudeneyCanterbury.url,
+      note: 'Adapted from public-domain ordering puzzle formats.'
+    }
+  };
+}
+
+function implicationChain(difficulty: number): PuzzleRound {
+  const answer = 'A and B are both false';
+  const { choices, correctIndex } = withAnswer(['A is true', 'B is true', 'C must be true'], answer);
+  return {
+    id: id('implication-chain'),
+    domain: 'reasoning',
+    typeId: 'implication-chain',
+    typeName: 'Implication Chain',
+    subtitle: 'Formal logic via contrapositive',
+    difficulty,
+    isAssessment: false,
+    prompt: 'What must follow?',
+    visual: {
+      mode: 'rules',
+      note: 'Rules',
+      lines: ['If A is true, then B is true.', 'If B is true, then C is true.', 'C is false.']
+    },
+    choices,
+    correctIndex,
+    explanation: 'Since C is false, B cannot be true. Since B is false, A cannot be true.',
+    source: {
+      title: publicDomainSources.classicRecreations.title,
+      url: publicDomainSources.classicRecreations.url,
+      note: 'Formal implication structure adapted from public-domain logic puzzle forms.'
+    }
+  };
+}
+
+function setLogic(difficulty: number): PuzzleRound {
+  const answer = 'Some non-striped cards exist.';
+  const { choices, correctIndex } = withAnswer(['All squares are red.', 'Some striped cards are red.', 'No red cards exist.'], answer);
+  return {
+    id: id('set-logic'),
+    domain: 'reasoning',
+    typeId: 'set-logic',
+    typeName: 'Set Logic',
+    subtitle: 'Syllogistic inclusion reasoning',
+    difficulty,
+    isAssessment: false,
+    prompt: 'Which conclusion must be true?',
+    visual: {
+      mode: 'rules',
+      note: 'Facts',
+      lines: ['All red cards are squares.', 'No squares are striped.', 'At least one red card exists.']
+    },
+    choices,
+    correctIndex,
+    explanation: 'A red card exists; every red card is a square; no square is striped. Therefore at least one non-striped card exists.',
+    source: {
+      title: publicDomainSources.classicRecreations.title,
+      url: publicDomainSources.classicRecreations.url,
+      note: 'Adapted from public-domain syllogism and set-reasoning formats.'
+    }
+  };
+}
+
+function dependencyPlan(difficulty: number): PuzzleRound {
+  const answer = '7 days';
+  const { choices, correctIndex } = withAnswer(['6 days', '8 days', '10 days'], answer);
+  return {
+    id: id('dependency-plan'),
+    domain: 'planning',
+    typeId: 'dependency-plan',
+    typeName: 'Dependency Plan',
+    subtitle: 'Critical path scheduling',
+    difficulty,
+    isAssessment: false,
+    prompt: 'What is the earliest completion time?',
+    visual: {
+      mode: 'rules',
+      note: 'Tasks',
+      lines: ['A takes 2 days.', 'B takes 3 days after A.', 'C takes 4 days after A.', 'D takes 1 day after both B and C.']
+    },
+    choices,
+    correctIndex,
+    explanation: 'A finishes at day 2. B finishes at day 5, C at day 6, so D can finish at day 7.',
+    source: {
+      title: publicDomainSources.classicRecreations.title,
+      url: publicDomainSources.classicRecreations.url,
+      note: 'Adapted from public-domain scheduling and route-planning puzzle formats.'
+    }
+  };
+}
+
+function valuePacking(difficulty: number): PuzzleRound {
+  const answer = 'Map + Rope + Lamp';
+  const { choices, correctIndex } = withAnswer(['Map + Kit', 'Rope + Lamp', 'Kit + Lamp'], answer);
+  return {
+    id: id('value-packing'),
+    domain: 'planning',
+    typeId: 'value-packing',
+    typeName: 'Value Packing',
+    subtitle: 'Capacity-constrained optimization',
+    difficulty,
+    isAssessment: false,
+    prompt: 'Capacity is 6. Which pack gives the highest value?',
+    visual: {
+      mode: 'rules',
+      note: 'Items',
+      lines: ['Map: weight 2, value 5', 'Rope: weight 3, value 7', 'Kit: weight 4, value 8', 'Lamp: weight 1, value 2']
+    },
+    choices,
+    correctIndex,
+    explanation: 'Map + Rope + Lamp has weight 6 and value 14, beating Map + Kit at value 13.',
+    source: {
+      title: publicDomainSources.dudeneyAmusements.title,
+      url: publicDomainSources.dudeneyAmusements.url,
+      note: 'Adapted from public-domain optimization and packing puzzle formats.'
+    }
+  };
+}
+
+function validSchedule(difficulty: number): PuzzleRound {
+  const answer = 'Draft, Data, Review, Call, Send';
+  const { choices, correctIndex } = withAnswer(['Call, Draft, Data, Review, Send', 'Draft, Review, Data, Call, Send', 'Draft, Data, Send, Review, Call'], answer);
+  return {
+    id: id('valid-schedule'),
+    domain: 'planning',
+    typeId: 'valid-schedule',
+    typeName: 'Valid Schedule',
+    subtitle: 'Multi-constraint ordering',
+    difficulty,
+    isAssessment: false,
+    prompt: 'Which schedule obeys every rule?',
+    visual: {
+      mode: 'rules',
+      note: 'Rules',
+      lines: ['Draft before Review.', 'Data before Review.', 'Review before Send.', 'Call is not first and happens before Send.']
+    },
+    choices,
+    correctIndex,
+    explanation: 'Draft and Data both precede Review, Review precedes Send, and Call is not first but still before Send.',
+    source: {
+      title: publicDomainSources.dudeneyCanterbury.title,
+      url: publicDomainSources.dudeneyCanterbury.url,
+      note: 'Adapted from public-domain ordering and itinerary puzzle formats.'
+    }
+  };
+}
+
+function bottleneckPlan(difficulty: number): PuzzleRound {
+  const answer = 'Test';
+  const { choices, correctIndex } = withAnswer(['Design', 'Build', 'Deploy'], answer);
+  return {
+    id: id('bottleneck-plan'),
+    domain: 'planning',
+    typeId: 'bottleneck-plan',
+    typeName: 'Bottleneck Plan',
+    subtitle: 'Resource bottleneck analysis',
+    difficulty,
+    isAssessment: false,
+    prompt: 'Which task should be shortened to reduce the total project time?',
+    visual: {
+      mode: 'rules',
+      note: 'Project',
+      lines: ['Design: 2 days, then Build and Test can start.', 'Build: 3 days after Design.', 'Test: 5 days after Design.', 'Deploy: 1 day after both Build and Test.']
+    },
+    choices,
+    correctIndex,
+    explanation: 'After Design, Test takes longer than Build and delays Deploy. Shortening Test shortens the critical path.',
+    source: {
+      title: publicDomainSources.classicRecreations.title,
+      url: publicDomainSources.classicRecreations.url,
+      note: 'Adapted from public-domain scheduling and critical-path puzzle formats.'
+    }
+  };
+}
+
+function speedDistance(difficulty: number): PuzzleRound {
+  const answer = '2.5 hours';
+  const { choices, correctIndex } = withAnswer(['2 hours', '3 hours', '4 hours'], answer);
+  return {
+    id: id('speed-distance'),
+    domain: 'quantitative',
+    typeId: 'speed-distance',
+    typeName: 'Speed Distance',
+    subtitle: 'Relative speed reasoning',
+    difficulty,
+    isAssessment: false,
+    prompt: 'Two trains start 250 km apart and move toward each other at 60 and 40 km/h. When do they meet?',
+    visual: { mode: 'statement', note: 'Closing speed = 60 + 40' },
+    choices,
+    correctIndex,
+    explanation: 'Their closing speed is 100 km/h, so 250 / 100 = 2.5 hours.',
+    source: {
+      title: publicDomainSources.classicRecreations.title,
+      url: publicDomainSources.classicRecreations.url,
+      note: 'Adapted from public-domain relative-speed arithmetic formats.'
+    }
+  };
+}
+
+function probabilityDraw(difficulty: number): PuzzleRound {
+  const answer = '3/5';
+  const { choices, correctIndex } = withAnswer(['2/5', '1/2', '3/10'], answer);
+  return {
+    id: id('probability-draw'),
+    domain: 'quantitative',
+    typeId: 'probability-draw',
+    typeName: 'Probability Draw',
+    subtitle: 'Combinatorics under no replacement',
+    difficulty,
+    isAssessment: false,
+    prompt: 'A bag has 3 red and 2 blue balls. Draw 2 without replacement. Probability of exactly one blue?',
+    visual: { mode: 'rules', note: 'Count', lines: ['Favorable pairs: 3 red x 2 blue = 6', 'Total pairs: C(5,2) = 10'] },
+    choices,
+    correctIndex,
+    explanation: 'There are 6 favorable pairs out of 10 possible pairs, so the probability is 3/5.',
+    source: {
+      title: publicDomainSources.classicRecreations.title,
+      url: publicDomainSources.classicRecreations.url,
+      note: 'Adapted from public-domain counting and probability puzzle formats.'
+    }
+  };
+}
+
+function remainderSystem(difficulty: number): PuzzleRound {
+  const answer = '17';
+  const { choices, correctIndex } = withAnswer(['12', '22', '31'], answer);
+  return {
+    id: id('remainder-system'),
+    domain: 'quantitative',
+    typeId: 'remainder-system',
+    typeName: 'Remainder System',
+    subtitle: 'Modular arithmetic',
+    difficulty,
+    isAssessment: false,
+    prompt: 'Find the smallest positive N: N leaves remainder 2 by 5 and remainder 3 by 7.',
+    visual: { mode: 'rules', note: 'Conditions', lines: ['N = 5k + 2', 'N = 7m + 3'] },
+    choices,
+    correctIndex,
+    explanation: '17 leaves remainder 2 when divided by 5 and remainder 3 when divided by 7.',
+    source: {
+      title: publicDomainSources.dudeneyAmusements.title,
+      url: publicDomainSources.dudeneyAmusements.url,
+      note: 'Adapted from public-domain number theory puzzle formats.'
+    }
+  };
+}
+
+function profitDiscount(difficulty: number): PuzzleRound {
+  const answer = '12.5%';
+  const { choices, correctIndex } = withAnswer(['10%', '15%', '20%'], answer);
+  return {
+    id: id('profit-discount'),
+    domain: 'quantitative',
+    typeId: 'profit-discount',
+    typeName: 'Profit Discount',
+    subtitle: 'Percent change reasoning',
+    difficulty,
+    isAssessment: false,
+    prompt: 'Cost is 80. Marked up 25%, then discounted 10%. Profit percent?',
+    visual: { mode: 'rules', note: 'Steps', lines: ['Marked price = 80 x 1.25 = 100', 'Selling price = 100 x 0.90 = 90'] },
+    choices,
+    correctIndex,
+    explanation: 'Profit is 10 on cost 80, so profit percent is 10/80 = 12.5%.',
+    source: {
+      title: publicDomainSources.classicRecreations.title,
+      url: publicDomainSources.classicRecreations.url,
+      note: 'Adapted from public-domain commercial arithmetic formats.'
+    }
+  };
+}
+
+function overlappingSets(difficulty: number): PuzzleRound {
+  const answer = '10';
+  const { choices, correctIndex } = withAnswer(['8', '12', '14'], answer);
+  return {
+    id: id('overlapping-sets'),
+    domain: 'quantitative',
+    typeId: 'overlapping-sets',
+    typeName: 'Overlapping Sets',
+    subtitle: 'Venn diagram reasoning',
+    difficulty,
+    isAssessment: false,
+    prompt: '40 students: 24 take math, 18 take chess, 8 take neither. How many take both?',
+    visual: { mode: 'rules', note: 'Sets', lines: ['At least one = 40 - 8 = 32', 'Math + Chess - Both = 32'] },
+    choices,
+    correctIndex,
+    explanation: 'Both = 24 + 18 - 32 = 10.',
+    source: {
+      title: publicDomainSources.classicRecreations.title,
+      url: publicDomainSources.classicRecreations.url,
+      note: 'Adapted from public-domain inclusion-exclusion puzzle formats.'
+    }
+  };
+}
+
 export const trainingGeneratorEntries: Record<CognitiveDomain, GeneratorEntry[]> = {
   processingSpeed: [
     { typeId: 'speed-match', typeName: 'Speed Match', generator: speedMatch, complexity: 'Core' },
@@ -1500,7 +1844,11 @@ export const trainingGeneratorEntries: Record<CognitiveDomain, GeneratorEntry[]>
     { typeId: 'logic-grid', typeName: 'Logic Grid', generator: logicGrid, complexity: 'Hard' },
     { typeId: 'conditional-syllogism', typeName: 'Conditional Chain', generator: conditionalSyllogism, complexity: 'Hard' },
     { typeId: 'spatial-transform', typeName: 'Spatial Transform', generator: spatialTransform, complexity: 'Hard' },
-    { typeId: 'suspect-deduction', typeName: 'Suspect Deduction', generator: suspectDeduction, complexity: 'Hard' }
+    { typeId: 'suspect-deduction', typeName: 'Suspect Deduction', generator: suspectDeduction, complexity: 'Hard' },
+    { typeId: 'truth-count-deduction', typeName: 'Truth Count', generator: truthCountDeduction, complexity: 'Hard' },
+    { typeId: 'rank-deduction', typeName: 'Rank Deduction', generator: rankDeduction, complexity: 'Hard' },
+    { typeId: 'implication-chain', typeName: 'Implication Chain', generator: implicationChain, complexity: 'Hard' },
+    { typeId: 'set-logic', typeName: 'Set Logic', generator: setLogic, complexity: 'Hard' }
   ],
   language: [
     { typeId: 'word-scramble', typeName: 'Word Scramble', generator: wordScramble, complexity: 'Core' },
@@ -1519,7 +1867,11 @@ export const trainingGeneratorEntries: Record<CognitiveDomain, GeneratorEntry[]>
     { typeId: 'planning-grid', typeName: 'Planning Grid', generator: planningGrid, complexity: 'Hard' },
     { typeId: 'seating-deduction', typeName: 'Seating Deduction', generator: seatingDeduction, complexity: 'Hard' },
     { typeId: 'weighing-puzzle', typeName: 'Weighing Puzzle', generator: weighingPuzzle, complexity: 'Hard' },
-    { typeId: 'river-crossing-plan', typeName: 'River Plan', generator: riverCrossingPlan, complexity: 'Hard' }
+    { typeId: 'river-crossing-plan', typeName: 'River Plan', generator: riverCrossingPlan, complexity: 'Hard' },
+    { typeId: 'dependency-plan', typeName: 'Dependency Plan', generator: dependencyPlan, complexity: 'Hard' },
+    { typeId: 'value-packing', typeName: 'Value Packing', generator: valuePacking, complexity: 'Hard' },
+    { typeId: 'valid-schedule', typeName: 'Valid Schedule', generator: validSchedule, complexity: 'Hard' },
+    { typeId: 'bottleneck-plan', typeName: 'Bottleneck Plan', generator: bottleneckPlan, complexity: 'Hard' }
   ],
   quantitative: [
     { typeId: 'equation-system', typeName: 'Equation System', generator: equationSystem, complexity: 'Core' },
@@ -1528,7 +1880,12 @@ export const trainingGeneratorEntries: Record<CognitiveDomain, GeneratorEntry[]>
     { typeId: 'quant-balance', typeName: 'Quant Balance', generator: quantitativeBalance, complexity: 'Hard' },
     { typeId: 'data-sufficiency', typeName: 'Data Sufficiency', generator: dataSufficiency, complexity: 'Hard' },
     { typeId: 'work-rate', typeName: 'Work Rate', generator: workRate, complexity: 'Hard' },
-    { typeId: 'mixture-puzzle', typeName: 'Mixture', generator: mixturePuzzle, complexity: 'Core' }
+    { typeId: 'mixture-puzzle', typeName: 'Mixture', generator: mixturePuzzle, complexity: 'Core' },
+    { typeId: 'speed-distance', typeName: 'Speed Distance', generator: speedDistance, complexity: 'Hard' },
+    { typeId: 'probability-draw', typeName: 'Probability Draw', generator: probabilityDraw, complexity: 'Hard' },
+    { typeId: 'remainder-system', typeName: 'Remainder System', generator: remainderSystem, complexity: 'Hard' },
+    { typeId: 'profit-discount', typeName: 'Profit Discount', generator: profitDiscount, complexity: 'Hard' },
+    { typeId: 'overlapping-sets', typeName: 'Overlapping Sets', generator: overlappingSets, complexity: 'Hard' }
   ]
 };
 
