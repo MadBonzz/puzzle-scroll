@@ -2,7 +2,6 @@ import * as Haptics from 'expo-haptics';
 import { Feather } from '@expo/vector-icons';
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { domainById } from '../data/domains';
 import type { PuzzleAttempt, PuzzleRound } from '../types';
 import { PuzzleVisual } from './PuzzleVisual';
 
@@ -13,7 +12,6 @@ interface Props {
 }
 
 export function PuzzleCard({ puzzle, height, onAnswered }: Props) {
-  const domain = domainById[puzzle.domain];
   const [phase, setPhase] = useState<'ready' | 'study' | 'interference' | 'answer'>(puzzle.requiresReady ? 'ready' : 'answer');
   const [selected, setSelected] = useState<number | null>(null);
   const [submitted, setSubmitted] = useState(false);
@@ -74,26 +72,13 @@ export function PuzzleCard({ puzzle, height, onAnswered }: Props) {
 
   return (
     <View style={[styles.outer, height ? { height } : undefined]}>
-      <View style={[styles.card, { backgroundColor: domain.tint }]}>
-        <View style={styles.header}>
-          <View style={[styles.iconBadge, { backgroundColor: domain.color }]}>
-            <Feather name={domain.icon as never} size={16} color="#FFFFFF" />
-          </View>
-          <View style={styles.headerText}>
-            <Text numberOfLines={1} style={[styles.domain, { color: domain.color }]}>{domain.label}</Text>
-            <Text numberOfLines={1} adjustsFontSizeToFit style={styles.title}>
-              {puzzle.typeName} - Lv {puzzle.difficulty}
-            </Text>
-          </View>
-        </View>
-
+      <View style={styles.card}>
         <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent} nestedScrollEnabled showsVerticalScrollIndicator={false}>
-          <Text style={styles.subtitle}>{puzzle.subtitle}</Text>
           {phase === 'ready' ? (
             <View style={styles.readyPanel}>
               <Text numberOfLines={5} adjustsFontSizeToFit style={styles.prompt}>{puzzle.studyPrompt ?? 'Get ready to study the pattern.'}</Text>
               <Text style={styles.readyText}>Start when you are ready. The study screen will disappear automatically.</Text>
-              <Pressable style={[styles.primaryAction, { backgroundColor: domain.color }]} onPress={beginStudy}>
+              <Pressable style={styles.primaryAction} onPress={beginStudy}>
                 <Text style={styles.primaryActionText}>I'm ready</Text>
               </Pressable>
             </View>
@@ -183,32 +168,8 @@ const styles = StyleSheet.create({
     padding: 12,
     borderWidth: 1,
     borderColor: '#E0DED5',
-    justifyContent: 'space-between'
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 9
-  },
-  iconBadge: {
-    width: 34,
-    height: 34,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center'
-  },
-  headerText: {
-    flex: 1
-  },
-  domain: {
-    fontSize: 11,
-    fontWeight: '900',
-    textTransform: 'uppercase'
-  },
-  title: {
-    color: '#20242A',
-    fontSize: 16,
-    fontWeight: '900'
+    justifyContent: 'space-between',
+    backgroundColor: '#FFFDF8'
   },
   body: {
     flex: 1,
@@ -219,12 +180,6 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
     paddingTop: 8,
     paddingBottom: 8
-  },
-  subtitle: {
-    color: '#68717C',
-    fontWeight: '800',
-    fontSize: 13,
-    marginBottom: 8
   },
   prompt: {
     color: '#20242A',
@@ -292,6 +247,7 @@ const styles = StyleSheet.create({
     fontWeight: '700'
   },
   primaryAction: {
+    backgroundColor: '#20242A',
     minHeight: 48,
     borderRadius: 8,
     alignItems: 'center',

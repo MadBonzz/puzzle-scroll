@@ -288,7 +288,7 @@ function Metric({ label, value }: { label: string; value: string }) {
   );
 }
 
-function AssessScreen() {
+function AssessScreen({ immersive, onToggleImmersive }: { immersive: boolean; onToggleImmersive: () => void }) {
   const domainScores = useAppStore((state) => state.domains);
   const recordAttempt = useAppStore((state) => state.recordAttempt);
   const recordAssessment = useAppStore((state) => state.recordAssessment);
@@ -298,7 +298,7 @@ function AssessScreen() {
   const { height } = useWindowDimensions();
   const buildBattery = () => generateAssessmentBattery(Object.fromEntries(domainIds.map((domain) => [domain, domainScores[domain].currentLevel])) as Record<CognitiveDomain, number>);
   const [battery, setBattery] = useState(buildBattery);
-  const cardHeight = Math.max(430, height - 148);
+  const cardHeight = Math.max(430, height - (immersive ? 18 : 148));
   const [index, setIndex] = useState(0);
   const current = battery[index] ?? battery[0];
   const goNext = () => setIndex((value) => Math.min(value + 1, battery.length - 1));
@@ -358,17 +358,22 @@ function AssessScreen() {
 
   return (
     <View style={styles.screen}>
-      <View style={styles.appHeader}>
-        <View>
-          <Text style={styles.kicker}>Brain Check</Text>
-          <Text style={styles.appTitle}>Assessment</Text>
+      {!immersive ? (
+        <View style={styles.appHeader}>
+          <View>
+            <Text style={styles.kicker}>Brain Check</Text>
+            <Text style={styles.appTitle}>Assessment</Text>
+          </View>
+          <Text style={styles.headerNote}>1 per domain</Text>
         </View>
-        <Text style={styles.headerNote}>1 per domain</Text>
-      </View>
+      ) : null}
+      <Pressable style={styles.lockButton} onPress={onToggleImmersive}>
+        <Feather name={immersive ? 'lock' : 'unlock'} size={18} color="#20242A" />
+      </Pressable>
       <SwipePager index={index} total={battery.length} onPrevious={goPrevious} onNext={goNext}>
         {current ? <PuzzleCard key={current.id} puzzle={current} height={cardHeight} onAnswered={onAnswered} /> : null}
       </SwipePager>
-      <PagerControls index={index} total={battery.length} onPrevious={goPrevious} onNext={goNext} />
+      {!immersive ? <PagerControls index={index} total={battery.length} onPrevious={goPrevious} onNext={goNext} /> : null}
     </View>
   );
 }
@@ -606,6 +611,7 @@ function TabBar({ active, setActive }: { active: Tab; setActive: (tab: Tab) => v
 function AppShell() {
   const [active, setActiveRaw] = useState<Tab>('dashboard');
   const [feedImmersive, setFeedImmersive] = useState(true);
+  const [assessImmersive, setAssessImmersive] = useState(true);
   const lastBrainCheckPromptDate = useAppStore((state) => state.lastBrainCheckPromptDate);
   const assessments = useAppStore((state) => state.assessments);
   const markBrainCheckPromptSeen = useAppStore((state) => state.markBrainCheckPromptSeen);
@@ -628,13 +634,16 @@ function AppShell() {
   };
   const setActive = (tab: Tab) => {
     if (tab === 'feed') setFeedImmersive(true);
+    if (tab === 'assess') setAssessImmersive(true);
     setActiveRaw(tab);
   };
 
   useEffect(() => {
-    if (active !== 'feed' || !feedImmersive) return undefined;
+    const isLocked = (active === 'feed' && feedImmersive) || (active === 'assess' && assessImmersive);
+    if (!isLocked) return undefined;
     const unlock = () => {
-      setFeedImmersive(false);
+      if (active === 'feed') setFeedImmersive(false);
+      if (active === 'assess') setAssessImmersive(false);
       return true;
     };
     const subscription = BackHandler.addEventListener('hardwareBackPress', unlock);
@@ -647,7 +656,7 @@ function AppShell() {
       };
     }
     return () => subscription.remove();
-  }, [active, feedImmersive]);
+  }, [active, feedImmersive, assessImmersive]);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -656,10 +665,10 @@ function AppShell() {
         {active === 'dashboard' ? <DashboardScreen onStartFeed={() => setActive('feed')} onStartCheck={() => setActive('assess')} /> : null}
         {active === 'feed' ? <FeedScreen immersive={feedImmersive} onToggleImmersive={() => setFeedImmersive((value) => !value)} /> : null}
         {active === 'profile' ? <ProfileScreen /> : null}
-        {active === 'assess' ? <AssessScreen /> : null}
+        {active === 'assess' ? <AssessScreen immersive={assessImmersive} onToggleImmersive={() => setAssessImmersive((value) => !value)} /> : null}
         {active === 'settings' ? <SettingsScreen /> : null}
       </View>
-      {active === 'feed' && feedImmersive ? null : <TabBar active={active} setActive={setActive} />}
+      {(active === 'feed' && feedImmersive) || (active === 'assess' && assessImmersive) ? null : <TabBar active={active} setActive={setActive} />}
       <Modal transparent visible={showBrainCheckPrompt} animationType="fade" onRequestClose={closeBrainCheckPrompt}>
         <View style={styles.modalBackdrop}>
           <View style={styles.modalPanel}>
