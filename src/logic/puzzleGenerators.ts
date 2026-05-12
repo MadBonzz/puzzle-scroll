@@ -64,6 +64,10 @@ function withAnswer(options: string[], answer: string) {
   return { choices, correctIndex: choices.indexOf(answer) };
 }
 
+function hiddenStudyVisual() {
+  return undefined;
+}
+
 function token(label: string, color?: string): VisualToken {
   return { label, color, tone: color ? 'solid' : 'outline' };
 }
@@ -74,14 +78,6 @@ function arithmeticProgression(level: number) {
   const length = 4 + Math.min(2, Math.floor(level / 7));
   const sequence = Array.from({ length }, (_, index) => start + index * step);
   return { sequence, answer: start + length * step, rule: `add ${step}` };
-}
-
-function hiddenTokens(count: number, color = '#CDD3DA') {
-  return Array.from({ length: count }, () => token('', color));
-}
-
-function hiddenSequence(count: number, color = '#CDD3DA') {
-  return Array.from({ length: count }, () => token('', color));
 }
 
 function studyMs(difficulty: number, base = 2600) {
@@ -99,8 +95,8 @@ function sequenceDistractors(answer: string, values: string[]) {
 function speedMatch(difficulty: number, isAssessment = false): PuzzleRound {
   const left = sample(shapes, 3).map((shape) => token(shape, pick(colors).value));
   const shouldMatch = Math.random() > 0.45;
-  const right = shouldMatch ? left.map((item) => ({ ...item })) : left.map((item, index) => (index === 1 ? token(pick(shapes), pick(colors).value) : { ...item }));
-  const { choices, correctIndex } = withAnswer(['Different'], shouldMatch ? 'Same' : 'Different');
+  const right = shouldMatch ? left.map((item) => ({ ...item })) : left.map((item, index) => (index === 1 ? token(shapes.find((shape) => shape !== item.label) ?? pick(shapes), pick(colors).value) : { ...item }));
+  const { choices, correctIndex } = withAnswer(['Different', 'Same with color change', 'Same with order change'], shouldMatch ? 'Same' : 'Different');
   return {
     id: id(isAssessment ? 'feature-match' : 'speed-match'),
     domain: 'processingSpeed',
@@ -110,7 +106,7 @@ function speedMatch(difficulty: number, isAssessment = false): PuzzleRound {
     difficulty,
     isAssessment,
     prompt: 'Are the two visual sets identical?',
-    visual: { mode: 'comparison', left: hiddenTokens(left.length), right: hiddenTokens(right.length), note: 'Stimulus hidden' },
+    visual: hiddenStudyVisual(),
     requiresReady: true,
     studyPrompt: 'Compare both sides quickly. They will disappear.',
     studyVisual: { mode: 'comparison', left, right, note: difficulty > 10 ? 'Brief exposure target' : undefined },
@@ -141,7 +137,7 @@ function peripheralCatch(difficulty: number): PuzzleRound {
     difficulty,
     isAssessment: false,
     prompt: 'What center shape and target location were shown?',
-    visual: { mode: 'grid', tokens: hiddenTokens(9), columns: 3 },
+    visual: hiddenStudyVisual(),
     requiresReady: true,
     studyPrompt: 'Identify the center shape and peripheral target location.',
     studyVisual: { mode: 'grid', tokens: tokens.map((item, index) => (index === 4 ? token(center, '#20242A') : item)), columns: 3 },
@@ -166,7 +162,7 @@ function patternFlash(difficulty: number): PuzzleRound {
     difficulty,
     isAssessment: false,
     prompt: 'Pick the exact flashed pattern.',
-    visual: { mode: 'tiles', tokens: hiddenTokens(base.length), columns: 3 },
+    visual: hiddenStudyVisual(),
     requiresReady: true,
     studyPrompt: 'Memorize the order, shape, and color of the flashed pattern.',
     studyVisual: { mode: 'tiles', tokens: base.map((part) => token(part.split('-')[0]!, colors.find((color) => color.name === part.split('-')[1])?.value)), columns: 3 },
@@ -198,7 +194,7 @@ function symbolScan(difficulty: number): PuzzleRound {
     difficulty,
     isAssessment: false,
     prompt: `How many items are ${targetColor.name} ${targetShape}s?`,
-    visual: { mode: 'grid', tokens: hiddenTokens(shuffledTokens.length), columns: 4 },
+    visual: hiddenStudyVisual(),
     requiresReady: true,
     studyPrompt: `Count ${targetColor.name} ${targetShape}s. The grid will disappear.`,
     studyVisual: { mode: 'grid', tokens: shuffledTokens, columns: 4 },
@@ -224,7 +220,7 @@ function colorRush(difficulty: number): PuzzleRound {
     difficulty,
     isAssessment: false,
     prompt: `How many ${target.name} dots are in the stream?`,
-    visual: { mode: 'tiles', tokens: hiddenTokens(stream.length), columns: 6 },
+    visual: hiddenStudyVisual(),
     requiresReady: true,
     studyPrompt: `Count only ${target.name} dots. The stream will disappear.`,
     studyVisual: { mode: 'tiles', tokens: stream.map((color) => token('', color.value)), columns: 6 },
@@ -249,7 +245,7 @@ function sequenceRecall(difficulty: number, isAssessment = false): PuzzleRound {
     difficulty,
     isAssessment,
     prompt: 'Choose the numbers in the exact shown order, left to right.',
-    visual: { mode: 'tiles', tokens: hiddenSequence(sequence.length), columns: sequence.length },
+    visual: hiddenStudyVisual(),
     requiresReady: true,
     studyPrompt: 'Memorize the numbers from left to right.',
     studyVisual: { mode: 'tiles', tokens: sequence.map((value) => token(value, '#2E6F95')), columns: sequence.length },
@@ -275,7 +271,7 @@ function numberChain(difficulty: number, isAssessment = false): PuzzleRound {
     difficulty,
     isAssessment,
     prompt: reverse ? 'Pick the reverse of the number chain.' : 'Pick the exact number chain.',
-    visual: { mode: 'tiles', tokens: hiddenTokens(length), columns: length },
+    visual: hiddenStudyVisual(),
     requiresReady: true,
     studyPrompt: `Memorize this number chain${reverse ? '; you will answer in reverse.' : '.'}`,
     studyVisual: { mode: 'tiles', tokens: chain.map((value) => token(value, '#2E6F95')), columns: length },
@@ -306,7 +302,7 @@ function dualTrack(difficulty: number): PuzzleRound {
     difficulty,
     isAssessment: false,
     prompt: `Compare the last tile with the one ${n} step back.`,
-    visual: { mode: 'tiles', tokens: hiddenTokens(series.length), columns: series.length },
+    visual: hiddenStudyVisual(),
     requiresReady: true,
     studyPrompt: `Track position and color across the ${series.length}-item stream.`,
     studyVisual: { mode: 'tiles', tokens: series.map((item) => token(String(item.pos), item.color.value)), columns: series.length },
@@ -333,7 +329,7 @@ function memoryGrid(difficulty: number): PuzzleRound {
     difficulty,
     isAssessment: false,
     prompt: `The matching ${pair} cards were shown. Which positions held the pair?`,
-    visual: { mode: 'grid', tokens: hiddenTokens(gridSize), columns: 3 },
+    visual: hiddenStudyVisual(),
     requiresReady: true,
     studyPrompt: `Memorize where the two ${pair} cards appear.`,
     studyVisual: { mode: 'grid', tokens: Array.from({ length: gridSize }, (_, index) => token(targetSlots.includes(index + 1) ? pair : String(index + 1), targetSlots.includes(index + 1) ? '#2E6F95' : '#CED6DF')), columns: 3 },
@@ -367,7 +363,7 @@ function operationSpan(difficulty: number): PuzzleRound {
     difficulty,
     isAssessment: false,
     prompt: 'Which letters were paired with equations that were actually true?',
-    visual: { mode: 'tiles', tokens: hiddenTokens(rows.length), columns: rows.length },
+    visual: hiddenStudyVisual(),
     requiresReady: true,
     studyPrompt: 'For each tile, check the equation. Remember the letter only if that equation is true.',
     studyVisual: { mode: 'tiles', tokens: rows.map((row) => token(`${row.letter}\n${row.text}`, '#2E6F95')), columns: 1 },
@@ -394,7 +390,7 @@ function delayedRecall(difficulty: number): PuzzleRound {
     difficulty,
     isAssessment: false,
     prompt: 'Now recall the original code in order.',
-    visual: { mode: 'tiles', tokens: hiddenSequence(code.length), columns: code.length },
+    visual: hiddenStudyVisual(),
     requiresReady: true,
     studyPrompt: 'Memorize this code. A distraction task appears before the answer choices.',
     studyVisual: { mode: 'tiles', tokens: code.map((letter) => token(letter, '#2E6F95')), columns: code.length },
@@ -450,7 +446,7 @@ function noiseFilter(difficulty: number): PuzzleRound {
     difficulty,
     isAssessment: false,
     prompt: `How many items match BOTH: ${targetColor.name} and ${targetShape}?`,
-    visual: { mode: 'grid', tokens: hiddenTokens(shuffled.length), columns: 4 },
+    visual: hiddenStudyVisual(),
     requiresReady: true,
     studyPrompt: `Ignore every partial match. Count only ${targetColor.name} ${targetShape}s.`,
     studyVisual: { mode: 'grid', tokens: shuffled, columns: 4, note: 'Distractors share either color or shape.' },
@@ -497,7 +493,7 @@ function stopSignal(difficulty: number): PuzzleRound {
     difficulty,
     isAssessment: false,
     prompt: 'During the flash, count only circles. How many circles were shown?',
-    visual: { mode: 'tiles', tokens: hiddenTokens(items.length), columns: items.length },
+    visual: hiddenStudyVisual(),
     requiresReady: true,
     studyPrompt: 'Count only circles. Ignore squares and triangles.',
     studyVisual: { mode: 'tiles', tokens: items.map((item) => token(item, item === 'circle' ? '#277A5B' : '#C8D0CC')), columns: items.length },
@@ -521,7 +517,7 @@ function oddPulse(difficulty: number): PuzzleRound {
     difficulty,
     isAssessment: false,
     prompt: 'Tap on regular beats and stop on rest beats. How many taps?',
-    visual: { mode: 'tiles', tokens: hiddenTokens(beats.length), columns: 4 },
+    visual: hiddenStudyVisual(),
     requiresReady: true,
     studyPrompt: 'Count TAP beats and inhibit REST beats.',
     studyVisual: { mode: 'tiles', tokens: beats.map((beat) => token(beat === 'tap' ? 'TAP' : 'REST', beat === 'tap' ? '#277A5B' : '#D9B657')), columns: 4 },
@@ -555,7 +551,7 @@ function conflictGrid(difficulty: number): PuzzleRound {
     difficulty,
     isAssessment: false,
     prompt: `Count words that say ${targetWord.name.toUpperCase()} in ${targetInk.name} ink.`,
-    visual: { mode: 'grid', tokens: hiddenTokens(shuffledTokens.length), columns: 3 },
+    visual: hiddenStudyVisual(),
     requiresReady: true,
     studyPrompt: `Count ${targetWord.name.toUpperCase()} words in ${targetInk.name} ink.`,
     studyVisual: { mode: 'grid', tokens: shuffledTokens, columns: 3 },
@@ -590,9 +586,13 @@ function ruleFlip(difficulty: number): PuzzleRound {
 
 function trailBlaze(difficulty: number, isAssessment = false): PuzzleRound {
   const length = 4 + Math.floor(difficulty / 5);
-  const sequence = Array.from({ length }, (_, index) => (index % 2 === 0 ? String(index / 2 + 1) : String.fromCharCode(65 + Math.floor(index / 2))));
+  const startsWithLetter = true;
+  const sequence = Array.from({ length }, (_, index) =>
+    (index % 2 === 0) === startsWithLetter ? String.fromCharCode(65 + Math.floor(index / 2)) : String(Math.floor(index / 2) + 1)
+  );
   const answer = sequence.join('-');
-  const { choices, correctIndex } = withAnswer([sequence.slice().reverse().join('-'), shuffle(sequence).join('-'), sequence.join('')], answer);
+  const numberFirst = Array.from({ length }, (_, index) => (index % 2 === 0 ? String(index / 2 + 1) : String.fromCharCode(65 + Math.floor(index / 2)))).join('-');
+  const { choices, correctIndex } = withAnswer([numberFirst, sequence.slice().reverse().join('-'), shuffle(sequence).join('-')], answer);
   return {
     id: id(isAssessment ? 'trail-making' : 'trail-blaze'),
     domain: 'flexibility',
@@ -601,7 +601,7 @@ function trailBlaze(difficulty: number, isAssessment = false): PuzzleRound {
     subtitle: isAssessment ? 'Assessment: alternate symbol sets' : 'Alternate numbers and letters',
     difficulty,
     isAssessment,
-    prompt: 'Choose the correct alternating trail.',
+    prompt: `Start at ${sequence[0]}. Choose the path that alternates letters and numbers.`,
     visual: { mode: 'trail', tokens: shuffle(sequence).map((value) => token(value, '#7B5E2F')), columns: 4 },
     choices,
     correctIndex,

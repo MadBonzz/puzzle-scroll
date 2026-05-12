@@ -142,14 +142,14 @@ export function PuzzleCard({ puzzle, height, onAnswered }: Props) {
         <View style={styles.footer}>
           <Text style={styles.footerHint}>
             {submitted
-              ? 'Result saved. Press Next when you are ready.'
+              ? 'Result saved. Swipe when you are ready.'
               : phase === 'ready'
                 ? 'Press ready before the timed display begins.'
                 : phase === 'study'
                   ? 'Memorize what you see.'
-                  : phase === 'interference'
-                    ? 'Do the distraction while holding the earlier item.'
-                  : 'Answer, then press Next for another puzzle.'}
+                : phase === 'interference'
+                  ? 'Do the distraction while holding the earlier item.'
+                  : 'Answer, then swipe for another puzzle.'}
           </Text>
         </View>
       </View>
@@ -297,9 +297,6 @@ const styles = StyleSheet.create({
     padding: 12,
     gap: 4,
     marginTop: 10
-  },
-  feedback: {
-    gap: 3
   },
   feedbackTitle: {
     fontWeight: '900',

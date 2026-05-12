@@ -141,6 +141,14 @@ function validateRuleCascade() {
   }
 }
 
+function validateTrailMakingPattern() {
+  const length = 4;
+  const sequence = Array.from({ length }, (_, index) =>
+    (index % 2 === 0) === true ? String.fromCharCode(65 + Math.floor(index / 2)) : String(Math.floor(index / 2) + 1)
+  );
+  assert(sequence.join('-') === 'A-1-B-2', `Trail Making: expected letter-first A-1-B-2, got ${sequence.join('-')}`);
+}
+
 function validateTruthCountDeduction() {
   const suspects = ['Iva', 'Jae', 'Kai'];
   const statements = [
@@ -252,6 +260,7 @@ validateQuant();
 validateWeighingPuzzle();
 validateRiverCrossingPlan();
 validateRuleCascade();
+validateTrailMakingPattern();
 validateTruthCountDeduction();
 validateRankDeduction();
 validateImplicationAndSetLogic();

@@ -64,7 +64,7 @@ function usePwaInstallSupport() {
 
     ensureLink('manifest', '/manifest.json');
     ensureLink('icon', '/icon.svg', { type: 'image/svg+xml' });
-    ensureLink('apple-touch-icon', '/maskable-icon.svg');
+    ensureLink('apple-touch-icon', '/icon-192.png');
     ensureMeta('theme-color', '#EEF4FF');
     ensureMeta('apple-mobile-web-app-capable', 'yes');
     ensureMeta('apple-mobile-web-app-title', 'PuzzleScroll');
@@ -94,18 +94,21 @@ function FeedScreen({ immersive, onToggleImmersive }: { immersive: boolean; onTo
     )
     );
   };
+  const appendSession = () => setSession((currentSession) => [...currentSession, ...buildSession()]);
   const [session, setSession] = useState(buildSession);
   const cardHeight = Math.max(430, height - (immersive ? 18 : 148));
   const [index, setIndex] = useState(0);
   const [missCount, setMissCount] = useState(0);
   const [sessionEnded, setSessionEnded] = useState(false);
+  const answeredIds = useRef(new Set<string>());
   const current = session[index] ?? session[0];
   const goNext = () => {
     if (feedSettings.sessionGoal === 'threeMisses' && missCount >= 3) {
       setSessionEnded(true);
       return;
     }
-    setIndex((value) => Math.min(value + 1, session.length - 1));
+    if (index >= session.length - 4) appendSession();
+    setIndex((value) => value + 1);
   };
   const goPrevious = () => setIndex((value) => Math.max(value - 1, 0));
   const restartSession = () => {
@@ -113,11 +116,18 @@ function FeedScreen({ immersive, onToggleImmersive }: { immersive: boolean; onTo
     setIndex(0);
     setMissCount(0);
     setSessionEnded(false);
+    answeredIds.current = new Set();
   };
   const onAnswered = (attempt: PuzzleAttempt) => {
+    if (answeredIds.current.has(attempt.puzzleId)) return;
+    answeredIds.current.add(attempt.puzzleId);
     recordAttempt(attempt);
     if (feedSettings.sessionGoal === 'threeMisses' && attempt.accuracy < 1) {
-      setMissCount((value) => value + 1);
+      setMissCount((value) => {
+        const next = value + 1;
+        if (next >= 3) setSessionEnded(true);
+        return next;
+      });
     }
   };
   useEffect(() => {
@@ -165,10 +175,10 @@ function FeedScreen({ immersive, onToggleImmersive }: { immersive: boolean; onTo
       <Pressable style={styles.lockButton} onPress={onToggleImmersive}>
         <Feather name={immersive ? 'lock' : 'unlock'} size={18} color="#20242A" />
       </Pressable>
-      <SwipePager index={index} total={session.length} onPrevious={goPrevious} onNext={goNext}>
+      <SwipePager index={index} total={Number.POSITIVE_INFINITY} onPrevious={goPrevious} onNext={goNext}>
         {current ? <PuzzleCard key={current.id} puzzle={current} height={cardHeight} onAnswered={onAnswered} /> : null}
       </SwipePager>
-      {!immersive ? <PagerControls index={index} total={session.length} onPrevious={goPrevious} onNext={goNext} /> : null}
+      {!immersive ? <PagerControls index={index} total={Number.POSITIVE_INFINITY} onPrevious={goPrevious} onNext={goNext} /> : null}
     </View>
   );
 }
@@ -235,7 +245,7 @@ function DashboardScreen({ onStartFeed, onStartCheck }: { onStartFeed: () => voi
       <Pressable style={styles.dashboardAction} onPress={onStartFeed}>
         <View>
           <Text style={styles.domainName}>Start Training</Text>
-          <Text style={styles.domainDescription}>{activeMode} · {sessionGoals.find((goal) => goal.id === feedSettings.sessionGoal)?.label ?? '10 min'}</Text>
+          <Text style={styles.domainDescription}>{activeMode} - {sessionGoals.find((goal) => goal.id === feedSettings.sessionGoal)?.label ?? '10 min'}</Text>
         </View>
         <Feather name="chevron-right" size={20} color="#20242A" />
       </Pressable>
@@ -324,6 +334,7 @@ function AssessScreen({ immersive, onToggleImmersive }: { immersive: boolean; on
   const [battery, setBattery] = useState(buildBattery);
   const cardHeight = Math.max(430, height - (immersive ? 18 : 148));
   const [index, setIndex] = useState(0);
+  const answeredIds = useRef(new Set<string>());
   const current = battery[index] ?? battery[0];
   const goNext = () => setIndex((value) => Math.min(value + 1, battery.length - 1));
   const goPrevious = () => setIndex((value) => Math.max(value - 1, 0));
@@ -331,9 +342,12 @@ function AssessScreen({ immersive, onToggleImmersive }: { immersive: boolean; on
   useEffect(() => {
     setBattery(buildBattery());
     setIndex(0);
+    answeredIds.current = new Set();
   }, [batteryId]);
 
   const onAnswered = (attempt: PuzzleAttempt) => {
+    if (answeredIds.current.has(attempt.puzzleId)) return;
+    answeredIds.current.add(attempt.puzzleId);
     recordAttempt(attempt);
     const assessmentScore = scoreAssessment(attempt.domain, attempt.accuracy, attempt.reactionTimeMs);
     const nextScores = { ...scores, [attempt.domain]: assessmentScore };
@@ -420,7 +434,7 @@ function SwipePager({
 
   const step = (direction: 'previous' | 'next') => {
     if (direction === 'previous' && index <= 0) return;
-    if (direction === 'next' && index >= total - 1) return;
+    if (Number.isFinite(total) && direction === 'next' && index >= total - 1) return;
 
     const now = Date.now();
     if (now - lastStepAt.current < 620) return;
@@ -471,16 +485,17 @@ function SwipePager({
 }
 
 function PagerControls({ index, total, onPrevious, onNext }: { index: number; total: number; onPrevious: () => void; onNext: () => void }) {
+  const isInfinite = !Number.isFinite(total);
   return (
     <View style={styles.pager}>
       <Pressable style={[styles.pagerButton, index === 0 && styles.pagerButtonDisabled]} onPress={onPrevious} disabled={index === 0}>
         <Feather name="chevron-up" size={18} color={index === 0 ? '#A9B0B8' : '#20242A'} />
         <Text style={[styles.pagerButtonText, index === 0 && styles.pagerButtonTextDisabled]}>Prev</Text>
       </Pressable>
-      <Text style={styles.pagerCount}>{index + 1} / {total}</Text>
-      <Pressable style={[styles.pagerButton, index >= total - 1 && styles.pagerButtonDisabled]} onPress={onNext} disabled={index >= total - 1}>
-        <Text style={[styles.pagerButtonText, index >= total - 1 && styles.pagerButtonTextDisabled]}>Next</Text>
-        <Feather name="chevron-down" size={18} color={index >= total - 1 ? '#A9B0B8' : '#20242A'} />
+      <Text style={styles.pagerCount}>{isInfinite ? String(index + 1) : `${index + 1} / ${total}`}</Text>
+      <Pressable style={[styles.pagerButton, !isInfinite && index >= total - 1 && styles.pagerButtonDisabled]} onPress={onNext} disabled={!isInfinite && index >= total - 1}>
+        <Text style={[styles.pagerButtonText, !isInfinite && index >= total - 1 && styles.pagerButtonTextDisabled]}>Next</Text>
+        <Feather name="chevron-down" size={18} color={!isInfinite && index >= total - 1 ? '#A9B0B8' : '#20242A'} />
       </Pressable>
     </View>
   );
@@ -858,11 +873,6 @@ const styles = StyleSheet.create({
   headerNote: {
     color: '#44516A',
     fontWeight: '900'
-  },
-  summary: {
-    paddingHorizontal: 20,
-    paddingTop: 18,
-    paddingBottom: 6
   },
   scrollContent: {
     padding: 20,
