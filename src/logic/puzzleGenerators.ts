@@ -119,13 +119,16 @@ function speedMatch(difficulty: number, isAssessment = false): PuzzleRound {
 
 function peripheralCatch(difficulty: number): PuzzleRound {
   const center = pick(shapes);
-  const targetIndex = Math.floor(Math.random() * 9);
+  const targetIndex = pick([0, 1, 2, 3, 5, 6, 7, 8]);
   const targetColor = pick(colors);
   const tokens = Array.from({ length: 9 }, (_, index) => (index === targetIndex ? token('target', targetColor.value) : token('.', '#D6D9DD')));
-  const zone = targetIndex < 3 ? (targetIndex === 0 ? 'Top left' : targetIndex === 2 ? 'Top right' : 'Center') : targetIndex > 5 ? (targetIndex === 6 ? 'Bottom left' : targetIndex === 8 ? 'Bottom right' : 'Center') : 'Center';
+  const zones = ['Top left', 'Top center', 'Top right', 'Middle left', 'Center', 'Middle right', 'Bottom left', 'Bottom center', 'Bottom right'] as const;
+  const zone = zones[targetIndex]!;
   const answer = `${center} / ${zone}`;
+  const alternativeZones = zones.filter((candidate, index) => index !== 4 && candidate !== zone);
+  const alternativeShape = shapes.find((shape) => shape !== center) ?? shapes[0]!;
   const { choices, correctIndex } = withAnswer(
-    [`${pick(shapes)} / ${zone}`, `${center} / ${pick(['Top left', 'Top right', 'Bottom left', 'Bottom right'])}`, `${pick(shapes)} / Center`],
+    [`${alternativeShape} / ${zone}`, `${center} / ${alternativeZones[0]}`, `${alternativeShape} / ${alternativeZones[1]}`],
     answer
   );
   return {
@@ -285,14 +288,25 @@ function numberChain(difficulty: number, isAssessment = false): PuzzleRound {
 function dualTrack(difficulty: number): PuzzleRound {
   const n = difficulty > 10 ? 2 : 1;
   const series = Array.from({ length: n + 2 }, () => ({ pos: 1 + Math.floor(Math.random() * 9), color: pick(colors) }));
-  const matchKind = pick(['position', 'color', 'none'] as const);
+  const matchKind = pick(['position', 'color', 'both', 'none'] as const);
   const previous = series[series.length - 1 - n]!;
   const current = series[series.length - 1]!;
   if (matchKind === 'position') current.pos = previous.pos;
   if (matchKind === 'color') current.color = previous.color;
-  if (matchKind === 'none' && current.pos === previous.pos) current.pos = (current.pos % 9) + 1;
-  const answer = matchKind === 'none' ? 'No match' : matchKind === 'position' ? 'Position match' : 'Color match';
-  const { choices, correctIndex } = withAnswer(['Position match', 'Color match', 'No match'], answer);
+  if (matchKind === 'both') {
+    current.pos = previous.pos;
+    current.color = previous.color;
+  }
+  if (matchKind === 'none') {
+    if (current.pos === previous.pos) current.pos = (current.pos % 9) + 1;
+    if (current.color.name === previous.color.name) {
+      current.color = colors.find((candidate) => candidate.name !== previous.color.name) ?? colors[0]!;
+    }
+  }
+  const positionMatch = current.pos === previous.pos;
+  const colorMatch = current.color.name === previous.color.name;
+  const answer = positionMatch && colorMatch ? 'Both match' : positionMatch ? 'Position match' : colorMatch ? 'Color match' : 'No match';
+  const { choices, correctIndex } = withAnswer(['Position match', 'Color match', 'Both match', 'No match'], answer);
   return {
     id: id('dual-track'),
     domain: 'workingMemory',
@@ -309,7 +323,7 @@ function dualTrack(difficulty: number): PuzzleRound {
     studyDurationMs: studyMs(difficulty, 2800),
     choices,
     correctIndex,
-    explanation: answer === 'No match' ? 'Neither tracked feature repeated.' : `${answer} repeated ${n} step back.`
+    explanation: answer === 'No match' ? 'Neither tracked feature repeated.' : `${answer} ${n} step back.`
   };
 }
 
@@ -342,7 +356,8 @@ function memoryGrid(difficulty: number): PuzzleRound {
 
 function operationSpan(difficulty: number): PuzzleRound {
   const length = 3 + Math.floor(difficulty / 6);
-  const letters = sample('RKTMSLP'.split(''), length);
+  const letterBank = 'RKTMSLP'.split('');
+  const letters = Array.from({ length }, () => pick(letterBank));
   const rows = letters.map((letter) => {
     const a = 2 + Math.floor(Math.random() * 7);
     const b = 1 + Math.floor(Math.random() * 5);
@@ -353,7 +368,18 @@ function operationSpan(difficulty: number): PuzzleRound {
   const answerLetters = rows.filter((row) => row.valid).map((row) => row.letter);
   const answer = answerLetters.length ? answerLetters.join('-') : 'none';
   const allLetters = rows.map((row) => row.letter);
-  const { choices, correctIndex } = withAnswer([shuffle(allLetters).join('-'), allLetters.slice().reverse().join('-'), 'none'], answer);
+  const falseLetters = rows.filter((row) => !row.valid).map((row) => row.letter);
+  const distractorCandidates = [
+    allLetters.join('-'),
+    allLetters.slice().reverse().join('-'),
+    falseLetters.length ? falseLetters.join('-') : 'none',
+    allLetters.slice(0, Math.max(1, allLetters.length - 1)).join('-'),
+    allLetters.slice(1).join('-'),
+    allLetters.slice(0, 1).join('-'),
+    [...allLetters, allLetters[0]!].join('-'),
+    'none'
+  ].filter((candidate, index, values) => candidate !== answer && values.indexOf(candidate) === index);
+  const { choices, correctIndex } = withAnswer(distractorCandidates.slice(0, 3), answer);
   return {
     id: id('operation-span'),
     domain: 'workingMemory',
@@ -377,7 +403,9 @@ function operationSpan(difficulty: number): PuzzleRound {
 function delayedRecall(difficulty: number): PuzzleRound {
   const code = sample('RKTMSLPQ'.split(''), 4 + Math.min(2, Math.floor(difficulty / 8)));
   const answer = code.join('');
-  const distractors = [code.slice().reverse().join(''), shuffle(code).join(''), code.slice(1).concat(code[0]!).join('')];
+  const swapped = [...code];
+  [swapped[0], swapped[1]] = [swapped[1]!, swapped[0]!];
+  const distractors = [code.slice().reverse().join(''), swapped.join(''), code.slice(1).concat(code[0]!).join('')];
   const { choices, correctIndex } = withAnswer(distractors, answer);
   const a = 12 + Math.floor(Math.random() * 9);
   const b = 4 + Math.floor(Math.random() * 8);
@@ -601,8 +629,8 @@ function trailBlaze(difficulty: number, isAssessment = false): PuzzleRound {
     subtitle: isAssessment ? 'Assessment: alternate symbol sets' : 'Alternate numbers and letters',
     difficulty,
     isAssessment,
-    prompt: `Start at ${sequence[0]}. Choose the path that alternates letters and numbers.`,
-    visual: { mode: 'trail', tokens: shuffle(sequence).map((value) => token(value, '#7B5E2F')), columns: 4 },
+    prompt: `Start at ${sequence[0]}. Use every tile once and alternate between letters and numbers. Keep letters in alphabetical order and numbers in increasing order.`,
+    visual: { mode: 'trail', tokens: shuffle(sequence).map((value) => token(value, '#7B5E2F')), columns: 4, note: 'Available tiles (unordered)' },
     choices,
     correctIndex,
     explanation: `The alternating path is ${answer}.`
@@ -672,7 +700,7 @@ function ruleCascade(difficulty: number): PuzzleRound {
     visual: {
       mode: 'rules',
       note: `${item.number} ${item.color.name} ${item.shape}`,
-      lines: ['If number is even, use color; otherwise use shape.', 'If the color name has more than 4 letters, switch to number.']
+      lines: ['If number is even, use color; otherwise use shape.', 'If the color name has more than 4 letters, switch to number.', 'When using number, label it even or odd.']
     },
     choices,
     correctIndex,
@@ -1243,7 +1271,7 @@ function equationSystem(difficulty: number, isAssessment = false): PuzzleRound {
   const sum = x + y;
   const diff = x - y;
   const answer = String(x);
-  const { choices, correctIndex } = withAnswer([String(y), String(sum), String(diff + y)], answer);
+  const { choices, correctIndex } = withAnswer([String(x - 1), String(x + 1), String(x + 2)], answer);
   return {
     id: id(isAssessment ? 'equation-check' : 'equation-system'),
     domain: 'quantitative',
@@ -1598,7 +1626,7 @@ function implicationChain(difficulty: number): PuzzleRound {
     },
     choices,
     correctIndex,
-    explanation: 'Since C is false, B cannot be true. Since B is false, A cannot be true.',
+    explanation: 'All rules hold without exception. If B were true, C would have to be true, contradicting that C is false; therefore B is false. If A were true, B would have to be true, so A is false too.',
     source: {
       title: publicDomainSources.classicRecreations.title,
       url: publicDomainSources.classicRecreations.url,
@@ -1730,7 +1758,7 @@ function bottleneckPlan(difficulty: number): PuzzleRound {
     subtitle: 'Resource bottleneck analysis',
     difficulty,
     isAssessment: false,
-    prompt: 'Which task should be shortened to reduce the total project time?',
+    prompt: 'After Design is complete, which parallel branch controls when Deploy can start?',
     visual: {
       mode: 'rules',
       note: 'Project',
@@ -1765,6 +1793,7 @@ function longCaseDeduction(difficulty: number): PuzzleRound {
       lines: [
         'Four people: Nia, Omar, Pia, Ravi.',
         'Labs: Lab 1, Lab 2, Lab 3, Lab 4. Days: Monday, Tuesday, Wednesday, Thursday.',
+        'Each person uses a different lab and works on a different day.',
         'Nia is not in Lab 1 or Lab 4.',
         'The Lab 2 person works exactly one day after Omar.',
         'Pia works on Wednesday and is not in Lab 2.',
@@ -2010,7 +2039,7 @@ export const assessmentGenerators: Record<CognitiveDomain, Generator> = {
 export function generateTrainingPuzzle(domain: CognitiveDomain, difficulty: number, enabledPuzzleTypes = allTrainingPuzzleTypeIds) {
   const allowed = new Set(enabledPuzzleTypes);
   const generators = trainingGeneratorEntries[domain].filter((entry) => allowed.has(entry.typeId));
-  return pick(generators.length ? generators : trainingGeneratorEntries[domain]).generator(difficulty, false);
+  return generators.length ? pick(generators).generator(difficulty, false) : undefined;
 }
 
 export function generateAssessmentBattery(difficultyByDomain: Record<CognitiveDomain, number>) {
@@ -2029,11 +2058,13 @@ export function generateDailySession(
     return trainingGeneratorEntries[domain].some((entry) => enabledTypeSet.has(entry.typeId));
   });
   const sequence = options?.domainSequence?.filter((domain) => allowedDomains.includes(domain));
-  const domainsForSession = sequence?.length ? sequence : allowedDomains.length ? allowedDomains : options?.enabledDomains?.length ? options.enabledDomains : domainIds;
+  const domainsForSession = sequence?.length ? sequence : allowedDomains;
+  if (!domainsForSession.length) return [];
   const puzzles: PuzzleRound[] = [];
   for (let index = 0; index < count; index += 1) {
     const domain = domainsForSession[index % domainsForSession.length]!;
-    puzzles.push(generateTrainingPuzzle(domain, difficultyByDomain[domain] ?? 5, [...enabledTypeSet]));
+    const puzzle = generateTrainingPuzzle(domain, difficultyByDomain[domain] ?? 5, [...enabledTypeSet]);
+    if (puzzle) puzzles.push(puzzle);
   }
   return shuffle(puzzles);
 }

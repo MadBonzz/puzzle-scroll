@@ -99,18 +99,17 @@ function modePreset(mode: FeedMode, sessionGoal: SessionGoal): FeedSettings {
   return { ...defaultFeedSettings(), mode, sessionGoal };
 }
 
-function normalizeFeedSettings(settings?: Partial<FeedSettings>): FeedSettings {
+export function normalizeFeedSettings(settings?: Partial<FeedSettings>): FeedSettings {
   const validDomains = new Set(domainIds);
   const validTypes = new Set(allTrainingPuzzleTypeIds);
   const mode = settings?.mode ?? 'mixed';
   const sessionGoal = settings?.sessionGoal ?? 'standard';
   const enabledDomains = (settings?.enabledDomains ?? domainIds).filter((domain) => validDomains.has(domain));
   const rawTypes = settings?.enabledPuzzleTypes;
-  const shouldRefreshFullTypeList = !rawTypes || rawTypes.length >= 50;
-  const enabledPuzzleTypes = (shouldRefreshFullTypeList ? allTrainingPuzzleTypeIds : rawTypes).filter((typeId) => validTypes.has(typeId));
+  const enabledPuzzleTypes = (rawTypes ?? allTrainingPuzzleTypeIds).filter((typeId) => validTypes.has(typeId));
   return {
     enabledDomains: enabledDomains.length ? enabledDomains : [...domainIds],
-    enabledPuzzleTypes: enabledPuzzleTypes.length ? enabledPuzzleTypes : [...allTrainingPuzzleTypeIds],
+    enabledPuzzleTypes,
     mode,
     sessionGoal
   };

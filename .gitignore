@@ -26,6 +26,9 @@ expo-web.err.log
 # Local browser/debug artifacts from verification
 .chrome-profile*/
 .chrome-debug/
+test-results/
+playwright-report/
+negative-controls-tmp/
 
 # OS/editor files
 .DS_Store
